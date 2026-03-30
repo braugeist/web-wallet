@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
 
 import { formatAmount } from './lib/utils/amounts'
@@ -43,6 +43,19 @@ function App() {
   const [recipient, setRecipient] = useState('')
   const [amount, setAmount] = useState('')
   const [fileInputKey, setFileInputKey] = useState(0)
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const settingsRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!settingsOpen) return
+    function handleClick(event: MouseEvent) {
+      if (settingsRef.current && !settingsRef.current.contains(event.target as Node)) {
+        setSettingsOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [settingsOpen])
 
   const selectedAsset = assets.find((a) => getAssetKey(a) === selectedAssetKey) ?? assets[0]
   const resultUrl = result ? getTransactionExplorerUrl(network, result.transactionHash) : undefined
@@ -84,37 +97,59 @@ function App() {
   return (
     <main className="app-shell">
       <header className="topbar">
-        <div className="brand">WebWallet</div>
-        <div className="topbar-actions">
-          <select
-            value={selectedChainId}
-            onChange={(event) => setSelectedChainId(Number(event.target.value) as 1 | 11155111)}
+        <div className="topbar-left">
+          <div className="brand">WebWallet</div>
+          <div className="topbar-meta">
+            <span className="topbar-network">{network.label}</span>
+            {address ? (
+              <button
+                className="topbar-address"
+                onClick={() => void navigator.clipboard.writeText(address)}
+                title="Copy address"
+              >
+                {truncateAddress(address)}
+              </button>
+            ) : null}
+          </div>
+        </div>
+        <div className="settings-wrapper" ref={settingsRef}>
+          <button
+            className="button-secondary button-sm settings-trigger"
+            onClick={() => setSettingsOpen((prev) => !prev)}
+            aria-label="Settings"
           >
-            <option value={11155111}>Sepolia</option>
-            <option value={1}>Ethereum Mainnet</option>
-          </select>
-          {refreshCurrentWallet ? (
-            <button className="button-secondary button-sm" onClick={() => void refreshCurrentWallet()}>
-              {isRefreshing ? 'Refreshing...' : 'Refresh'}
-            </button>
-          ) : null}
-          <button className="button-secondary button-sm" onClick={() => void exportRecoveryFile()}>
-            Backup
+            &#9881;
           </button>
+          {settingsOpen ? (
+            <div className="settings-menu">
+              <label className="settings-item field">
+                <span>Network</span>
+                <select
+                  value={selectedChainId}
+                  onChange={(event) => setSelectedChainId(Number(event.target.value) as 1 | 11155111)}
+                >
+                  <option value={11155111}>Sepolia</option>
+                  <option value={1}>Ethereum Mainnet</option>
+                </select>
+              </label>
+              {refreshCurrentWallet ? (
+                <button
+                  className="button-secondary settings-action"
+                  onClick={() => { void refreshCurrentWallet(); setSettingsOpen(false) }}
+                >
+                  {isRefreshing ? 'Refreshing...' : 'Refresh balances'}
+                </button>
+              ) : null}
+              <button
+                className="button-secondary settings-action"
+                onClick={() => { void exportRecoveryFile(); setSettingsOpen(false) }}
+              >
+                Backup wallet
+              </button>
+            </div>
+          ) : null}
         </div>
       </header>
-
-      {address ? (
-        <section className="wallet-address">
-          <code className="address-code">{truncateAddress(address, 10, 8)}</code>
-          <button
-            className="button-secondary button-sm"
-            onClick={() => void navigator.clipboard.writeText(address)}
-          >
-            Copy
-          </button>
-        </section>
-      ) : null}
 
       {statusMessage ? <div className="banner success">{statusMessage}</div> : null}
       {error ? <div className="banner error">{error}</div> : null}

@@ -109,34 +109,84 @@ strong {
   box-shadow: var(--panel-shadow);
 }
 
-.topbar-actions {
+.topbar-left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.topbar-meta {
   display: flex;
   align-items: center;
   gap: 8px;
+  font-size: 0.8rem;
 }
 
-.topbar-actions select {
+.topbar-network {
+  color: var(--accent);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.topbar-address {
+  all: unset;
+  cursor: pointer;
+  font-family: 'SFMono-Regular', ui-monospace, monospace;
+  font-size: 0.8rem;
+  color: var(--muted);
+  transition: color 0.15s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.topbar-address:hover {
+  color: var(--foreground);
+}
+
+.settings-wrapper {
+  position: relative;
+}
+
+.settings-trigger {
+  font-size: 1.15rem;
+  line-height: 1;
+  padding: 0 10px;
+}
+
+.settings-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 10;
+  min-width: 220px;
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--background-elevated);
+  backdrop-filter: blur(20px);
+  box-shadow: var(--panel-shadow);
+}
+
+.settings-menu select {
   min-height: 36px;
   padding: 0 10px;
   font-size: 0.85rem;
+  width: 100%;
 }
 
-/* Wallet address bar */
-.wallet-address {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  padding: 10px 16px;
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  background: var(--surface);
-  backdrop-filter: blur(16px);
+.settings-item {
+  margin: 0;
 }
 
-.address-code {
+.settings-action {
+  width: 100%;
+  text-align: left;
   font-size: 0.9rem;
-  color: var(--muted);
+  min-height: 40px;
 }
 
 /* Tabs */
@@ -342,10 +392,6 @@ button:disabled {
   .topbar {
     flex-direction: column;
     align-items: stretch;
-  }
-
-  .topbar-actions {
-    flex-wrap: wrap;
   }
 
   .button-row {
