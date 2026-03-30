@@ -188,7 +188,16 @@ function App() {
         {tab === 'assets' ? (
           <div className="asset-list">
             {balances.map((balance) => (
-              <article className="asset-row" key={balance.asset.type === 'native' ? 'native' : balance.asset.address}>
+              <article
+                className="asset-row clickable"
+                key={balance.asset.type === 'native' ? 'native' : balance.asset.address}
+                role="button"
+                tabIndex={0}
+                onClick={() => {
+                  setSelectedAssetKey(getAssetKey(balance.asset))
+                  setTab('send')
+                }}
+              >
                 <div>
                   <p className="asset-symbol">{balance.asset.symbol}</p>
                   <p className="muted">{balance.asset.name}</p>

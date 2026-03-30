@@ -379,6 +379,16 @@ button:disabled {
   background: rgba(15, 23, 42, 0.5);
 }
 
+.asset-row.clickable {
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.asset-row.clickable:hover {
+  border-color: var(--border-strong);
+  background: var(--surface-soft);
+}
+
 .asset-symbol {
   font-size: 1rem;
   font-weight: 700;
