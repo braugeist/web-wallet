@@ -44,18 +44,24 @@ function App() {
   const [amount, setAmount] = useState('')
   const [fileInputKey, setFileInputKey] = useState(0)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [networkPickerOpen, setNetworkPickerOpen] = useState(false)
   const settingsRef = useRef<HTMLDivElement>(null)
+  const networkPickerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    if (!settingsOpen) return
+    const open = settingsOpen || networkPickerOpen
+    if (!open) return
     function handleClick(event: MouseEvent) {
-      if (settingsRef.current && !settingsRef.current.contains(event.target as Node)) {
+      if (settingsOpen && settingsRef.current && !settingsRef.current.contains(event.target as Node)) {
         setSettingsOpen(false)
+      }
+      if (networkPickerOpen && networkPickerRef.current && !networkPickerRef.current.contains(event.target as Node)) {
+        setNetworkPickerOpen(false)
       }
     }
     document.addEventListener('mousedown', handleClick)
     return () => document.removeEventListener('mousedown', handleClick)
-  }, [settingsOpen])
+  }, [settingsOpen, networkPickerOpen])
 
   const selectedAsset = assets.find((a) => getAssetKey(a) === selectedAssetKey) ?? assets[0]
   const resultUrl = result ? getTransactionExplorerUrl(network, result.transactionHash) : undefined
@@ -100,7 +106,12 @@ function App() {
         <div className="topbar-left">
           <div className="brand">WebWallet</div>
           <div className="topbar-meta">
-            <span className="topbar-network">{network.label}</span>
+            <button
+              className="topbar-network"
+              onClick={() => setNetworkPickerOpen((prev) => !prev)}
+            >
+              {network.label}
+            </button>
             {address ? (
               <button
                 className="topbar-address"
@@ -122,16 +133,6 @@ function App() {
           </button>
           {settingsOpen ? (
             <div className="settings-menu">
-              <label className="settings-item field">
-                <span>Network</span>
-                <select
-                  value={selectedChainId}
-                  onChange={(event) => setSelectedChainId(Number(event.target.value) as 1 | 11155111)}
-                >
-                  <option value={11155111}>Sepolia</option>
-                  <option value={1}>Ethereum Mainnet</option>
-                </select>
-              </label>
               {refreshCurrentWallet ? (
                 <button
                   className="button-secondary settings-action"
@@ -166,7 +167,24 @@ function App() {
         </button>
       </nav>
 
-      <section className="panel tab-content">
+      <section className="panel tab-content" style={{ position: 'relative' }}>
+        {networkPickerOpen ? (
+          <div className="network-picker" ref={networkPickerRef}>
+            <span className="network-picker-title">Select network</span>
+            <button
+              className={selectedChainId === 11155111 ? 'network-option active' : 'network-option'}
+              onClick={() => { setSelectedChainId(11155111); setNetworkPickerOpen(false) }}
+            >
+              Sepolia
+            </button>
+            <button
+              className={selectedChainId === 1 ? 'network-option active' : 'network-option'}
+              onClick={() => { setSelectedChainId(1); setNetworkPickerOpen(false) }}
+            >
+              Ethereum Mainnet
+            </button>
+          </div>
+        ) : null}
         {tab === 'assets' ? (
           <div className="asset-list">
             {balances.map((balance) => (

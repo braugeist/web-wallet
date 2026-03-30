@@ -124,9 +124,17 @@ strong {
 }
 
 .topbar-network {
+  all: unset;
+  cursor: pointer;
   color: var(--accent);
   font-weight: 500;
+  font-size: 0.8rem;
   white-space: nowrap;
+  transition: color 0.15s;
+}
+
+.topbar-network:hover {
+  color: var(--accent-strong);
 }
 
 .topbar-address {
@@ -187,6 +195,50 @@ strong {
   text-align: left;
   font-size: 0.9rem;
   min-height: 40px;
+}
+
+/* Network picker overlay */
+.network-picker {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  gap: 6px;
+  padding: 20px;
+  border-radius: 18px;
+  background: var(--background-elevated);
+  backdrop-filter: blur(20px);
+}
+
+.network-picker-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted);
+  margin-bottom: 2px;
+}
+
+.network-option {
+  all: unset;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--foreground);
+  background: rgba(15, 23, 42, 0.5);
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.network-option:hover {
+  background: var(--surface-soft);
+}
+
+.network-option.active {
+  border-color: var(--border-strong);
+  background: linear-gradient(180deg, rgba(56, 189, 248, 0.12), rgba(14, 165, 233, 0.06));
 }
 
 /* Tabs */
