@@ -1,9 +1,16 @@
-import { OnboardingPanel } from './features/onboarding/OnboardingPanel'
-import { PortfolioPanel } from './features/portfolio/PortfolioPanel'
-import { ReceivePanel } from './features/receive/ReceivePanel'
-import { SendPanel } from './features/send/SendPanel'
-import { getTransactionExplorerUrl } from './lib/utils/format'
+import { useState } from 'react'
+import { QRCodeSVG } from 'qrcode.react'
+
+import { formatAmount } from './lib/utils/amounts'
+import { truncateAddress, getTransactionExplorerUrl } from './lib/utils/format'
 import { useWalletState } from './state/useWalletState'
+import type { WalletAsset, TransferQuote } from './lib/chains/types'
+
+type Tab = 'assets' | 'receive' | 'send'
+
+function getAssetKey(asset: WalletAsset) {
+  return asset.type === 'native' ? `native:${asset.chainId}` : `erc20:${asset.address}`
+}
 
 function App() {
   const {
@@ -11,17 +18,17 @@ function App() {
     assets,
     balances,
     createWallet,
-    disconnectWallet,
     error,
-    hasSavedSession,
+    exportRecoveryFile,
     isCreating,
     isPreparing,
     isRefreshing,
+    isRestoringFromFile,
     isSending,
     network,
     prepareTransfer,
     quote,
-    reconnectWallet,
+    restoreFromRecoveryFile,
     refreshCurrentWallet,
     result,
     selectedChainId,
@@ -31,93 +38,213 @@ function App() {
     statusMessage,
   } = useWalletState()
 
-  const nativeBalance = balances.find((balance) => balance.asset.type === 'native')
+  const [tab, setTab] = useState<Tab>('assets')
+  const [selectedAssetKey, setSelectedAssetKey] = useState(() => getAssetKey(assets[0]))
+  const [recipient, setRecipient] = useState('')
+  const [amount, setAmount] = useState('')
+  const [fileInputKey, setFileInputKey] = useState(0)
+
+  const selectedAsset = assets.find((a) => getAssetKey(a) === selectedAssetKey) ?? assets[0]
   const resultUrl = result ? getTransactionExplorerUrl(network, result.transactionHash) : undefined
+
+  if (!session) {
+    return (
+      <main className="app-shell app-center">
+        <div className="brand">WebWallet</div>
+        <div className="button-row onboarding-actions">
+          <button onClick={() => void createWallet()} disabled={isCreating}>
+            {isCreating ? 'Creating...' : 'Create new wallet'}
+          </button>
+          <button
+            className="button-secondary"
+            onClick={() => document.getElementById('recovery-input')?.click()}
+            disabled={isRestoringFromFile}
+          >
+            {isRestoringFromFile ? 'Restoring...' : 'Restore existing wallet'}
+          </button>
+        </div>
+        <input
+          id="recovery-input"
+          key={fileInputKey}
+          hidden
+          accept="application/json,.json"
+          type="file"
+          onChange={(event) => {
+            const file = event.target.files?.[0]
+            setFileInputKey((k) => k + 1)
+            if (file) void restoreFromRecoveryFile(file)
+          }}
+        />
+        {statusMessage ? <div className="banner success">{statusMessage}</div> : null}
+        {error ? <div className="banner error">{error}</div> : null}
+      </main>
+    )
+  }
 
   return (
     <main className="app-shell">
       <header className="topbar">
-        <div>
-          <p className="eyebrow">MVP</p>
-          <strong>Passkey Wallet</strong>
-        </div>
-
+        <div className="brand">WebWallet</div>
         <div className="topbar-actions">
-          <label className="field compact-field">
-            <span>Network</span>
-            <select
-              value={selectedChainId}
-              onChange={(event) => setSelectedChainId(Number(event.target.value) as 1 | 11155111)}
-            >
-              <option value={11155111}>Sepolia</option>
-              <option value={1}>Ethereum Mainnet</option>
-            </select>
-          </label>
-
+          <select
+            value={selectedChainId}
+            onChange={(event) => setSelectedChainId(Number(event.target.value) as 1 | 11155111)}
+          >
+            <option value={11155111}>Sepolia</option>
+            <option value={1}>Ethereum Mainnet</option>
+          </select>
           {refreshCurrentWallet ? (
-            <button className="button-secondary" onClick={() => void refreshCurrentWallet()}>
-              Refresh
+            <button className="button-secondary button-sm" onClick={() => void refreshCurrentWallet()}>
+              {isRefreshing ? 'Refreshing...' : 'Refresh'}
             </button>
           ) : null}
+          <button className="button-secondary button-sm" onClick={() => void exportRecoveryFile()}>
+            Backup
+          </button>
         </div>
       </header>
 
-      <OnboardingPanel
-        hasSavedSession={hasSavedSession}
-        isCreating={isCreating}
-        onCreate={createWallet}
-        onDisconnect={disconnectWallet}
-        onReconnect={reconnectWallet}
-        walletLabel={session?.label}
-      />
+      {address ? (
+        <section className="wallet-address">
+          <code className="address-code">{truncateAddress(address, 10, 8)}</code>
+          <button
+            className="button-secondary button-sm"
+            onClick={() => void navigator.clipboard.writeText(address)}
+          >
+            Copy
+          </button>
+        </section>
+      ) : null}
 
       {statusMessage ? <div className="banner success">{statusMessage}</div> : null}
       {error ? <div className="banner error">{error}</div> : null}
-      {session && nativeBalance?.value === 0n ? (
-        <div className="banner warning">
-          This wallet has no ETH on {network.label}. Smart-account transactions still need native
-          gas.
-        </div>
-      ) : null}
 
-      {session && address ? (
-        <section className="dashboard">
-          <section className="panel hero-panel">
-            <div>
-              <p className="eyebrow">Wallet</p>
-              <h2>{session.label}</h2>
+      <nav className="tab-bar">
+        <button className={tab === 'assets' ? 'tab active' : 'tab'} onClick={() => setTab('assets')}>
+          Assets
+        </button>
+        <button className={tab === 'receive' ? 'tab active' : 'tab'} onClick={() => setTab('receive')}>
+          Receive
+        </button>
+        <button className={tab === 'send' ? 'tab active' : 'tab'} onClick={() => setTab('send')}>
+          Send
+        </button>
+      </nav>
+
+      <section className="panel tab-content">
+        {tab === 'assets' ? (
+          <div className="asset-list">
+            {balances.map((balance) => (
+              <article className="asset-row" key={balance.asset.type === 'native' ? 'native' : balance.asset.address}>
+                <div>
+                  <p className="asset-symbol">{balance.asset.symbol}</p>
+                  <p className="muted">{balance.asset.name}</p>
+                </div>
+                <div className="asset-value">
+                  {formatAmount(balance.value, balance.asset.decimals)} {balance.asset.symbol}
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : null}
+
+        {tab === 'receive' && address ? (
+          <div className="receive-content">
+            <div className="qr-card">
+              <QRCodeSVG value={address} size={176} bgColor="transparent" fgColor="currentColor" />
+            </div>
+            <div className="card-stack">
+              <p className="muted">{network.label}</p>
               <code className="block-code">{address}</code>
             </div>
-            <div className="hero-facts">
-              <div>
-                <p className="muted">Smart account</p>
-                <strong>Coinbase Smart Wallet</strong>
-              </div>
-              <div>
-                <p className="muted">Owner type</p>
-                <strong>WebAuthn passkey</strong>
-              </div>
-            </div>
-          </section>
-
-          <div className="dashboard-grid">
-            <PortfolioPanel balances={balances} isRefreshing={isRefreshing} />
-            <ReceivePanel address={address} chainLabel={network.label} />
           </div>
+        ) : null}
 
-          <SendPanel
-            assets={assets}
-            isPreparing={isPreparing}
-            isSending={isSending}
-            onPrepare={prepareTransfer}
-            onSend={sendTransfer}
-            quote={quote}
-            result={result}
-            resultUrl={resultUrl}
-          />
-        </section>
-      ) : null}
+        {tab === 'send' ? (
+          <div className="card-stack">
+            <label className="field">
+              <span>Asset</span>
+              <select
+                value={getAssetKey(selectedAsset)}
+                onChange={(event) => setSelectedAssetKey(event.target.value)}
+              >
+                {assets.map((asset) => (
+                  <option value={getAssetKey(asset)} key={getAssetKey(asset)}>
+                    {asset.symbol} {asset.type === 'native' ? '(native)' : ''}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="field">
+              <span>Recipient</span>
+              <input
+                value={recipient}
+                onChange={(event) => setRecipient(event.target.value)}
+                placeholder="0x..."
+              />
+            </label>
+
+            <label className="field">
+              <span>Amount</span>
+              <input
+                inputMode="decimal"
+                value={amount}
+                onChange={(event) => setAmount(event.target.value)}
+                placeholder={`0.0 ${selectedAsset.symbol}`}
+              />
+            </label>
+
+            <div className="button-row">
+              <button
+                onClick={() => void prepareTransfer(selectedAsset, recipient, amount)}
+                disabled={isPreparing || isSending}
+              >
+                {isPreparing ? 'Preparing...' : 'Preview'}
+              </button>
+              <button
+                className="button-secondary"
+                onClick={() => void sendTransfer()}
+                disabled={!quote || isPreparing || isSending}
+              >
+                {isSending ? 'Sending...' : 'Confirm'}
+              </button>
+            </div>
+
+            {renderQuote(quote)}
+            {renderResult(result, resultUrl)}
+          </div>
+        ) : null}
+      </section>
     </main>
+  )
+}
+
+function renderQuote(quote: TransferQuote | null) {
+  if (!quote) return null
+
+  return (
+    <div className="callout">
+      <p>
+        {formatAmount(quote.value, quote.asset.decimals)} {quote.asset.symbol} to {truncateAddress(quote.recipient)}
+      </p>
+      <p className="muted">Max fee: {formatAmount(quote.estimatedFee, 18)} ETH</p>
+    </div>
+  )
+}
+
+function renderResult(result: { success: boolean; userOperationHash: string } | null, resultUrl?: string) {
+  if (!result) return null
+
+  return (
+    <div className="callout success">
+      <p>{result.success ? 'Confirmed' : 'Reverted'}</p>
+      {resultUrl ? (
+        <a href={resultUrl} target="_blank" rel="noreferrer">
+          View on explorer
+        </a>
+      ) : null}
+    </div>
   )
 }
 

@@ -1,6 +1,6 @@
 import type { Hex } from 'viem'
 
-const STORAGE_KEY = 'passkey-wallet.session'
+const STORAGE_KEY = 'webwallet.session'
 
 export type WalletSession = {
   createdAt: string
@@ -11,6 +11,23 @@ export type WalletSession = {
   label: string
   rpId: string
   version: 1
+}
+
+export function parseWalletSession(value: unknown): WalletSession | null {
+  const parsed = value as WalletSession
+
+  if (
+    parsed?.version !== 1 ||
+    typeof parsed.createdAt !== 'string' ||
+    typeof parsed.label !== 'string' ||
+    typeof parsed.rpId !== 'string' ||
+    typeof parsed.credential?.id !== 'string' ||
+    typeof parsed.credential?.publicKey !== 'string'
+  ) {
+    return null
+  }
+
+  return parsed
 }
 
 export function loadWalletSession(): WalletSession | null {
@@ -24,19 +41,7 @@ export function loadWalletSession(): WalletSession | null {
   }
 
   try {
-    const parsed = JSON.parse(raw) as WalletSession
-
-    if (
-      parsed?.version !== 1 ||
-      typeof parsed.label !== 'string' ||
-      typeof parsed.rpId !== 'string' ||
-      typeof parsed.credential?.id !== 'string' ||
-      typeof parsed.credential?.publicKey !== 'string'
-    ) {
-      return null
-    }
-
-    return parsed
+    return parseWalletSession(JSON.parse(raw))
   } catch {
     return null
   }

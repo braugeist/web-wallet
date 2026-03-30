@@ -5,7 +5,15 @@ import { getCuratedAssets } from '../config/tokens'
 import { defaultNetwork, getSupportedNetwork, type SupportedChainId } from '../config/networks'
 import { evmChainAdapter } from '../lib/chains/evm/adapter'
 import type { TransferQuote, TransferResult, WalletAsset, WalletBalance } from '../lib/chains/types'
-import { isPasskeySupported, registerPasskey } from '../lib/passkey/credential'
+import {
+  isPasskeySupported,
+  registerPasskey,
+  verifyRecoveryPasskey,
+} from '../lib/passkey/credential'
+import {
+  parseRecoveryFile,
+  triggerRecoveryFileDownload,
+} from '../lib/storage/recoveryFile'
 import {
   clearWalletSession,
   loadWalletSession,
@@ -33,6 +41,7 @@ export function useWalletState() {
   const [isCreating, setIsCreating] = useState(false)
   const [isPreparing, setIsPreparing] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [isRestoringFromFile, setIsRestoringFromFile] = useState(false)
   const [isSending, setIsSending] = useState(false)
 
   const network = useMemo(() => getSupportedNetwork(selectedChainId), [selectedChainId])
@@ -79,7 +88,7 @@ export function useWalletState() {
   }, [refresh, session])
 
   const createWallet = useCallback(
-    async (label: string) => {
+    async () => {
       if (!isPasskeySupported()) {
         setError('Passkeys require a secure browser context with WebAuthn support.')
         return
@@ -90,10 +99,10 @@ export function useWalletState() {
       setStatusMessage(null)
 
       try {
-        const nextSession = await registerPasskey(label.trim() || 'Primary wallet')
+        const nextSession = await registerPasskey('WebWallet')
         saveWalletSession(nextSession)
         setSession(nextSession)
-        setStatusMessage('Passkey wallet created. Fund the address to start sending.')
+        setStatusMessage('Wallet created. Fund the address to start sending.')
       } catch (caughtError) {
         setError(getErrorMessage(caughtError))
       } finally {
@@ -115,6 +124,25 @@ export function useWalletState() {
     setStatusMessage('Wallet restored from this browser profile.')
   }, [])
 
+  const restoreFromRecoveryFile = useCallback(async (file: File) => {
+    setIsRestoringFromFile(true)
+    setError(null)
+    setStatusMessage('Select the original passkey to verify this recovery file.')
+
+    try {
+      const nextSession = await parseRecoveryFile(await file.text())
+      await verifyRecoveryPasskey(nextSession)
+      saveWalletSession(nextSession)
+      setSession(nextSession)
+      setStatusMessage('Wallet restored from the recovery file.')
+    } catch (caughtError) {
+      setError(getErrorMessage(caughtError))
+      setStatusMessage(null)
+    } finally {
+      setIsRestoringFromFile(false)
+    }
+  }, [])
+
   const disconnectWallet = useCallback(() => {
     clearWalletSession()
     setSession(null)
@@ -125,6 +153,23 @@ export function useWalletState() {
     setError(null)
     setStatusMessage('Saved wallet metadata removed from this browser.')
   }, [])
+
+  const exportRecoveryFile = useCallback(async () => {
+    if (!session) {
+      setError('Create or restore a wallet first.')
+      return
+    }
+
+    setError(null)
+    setStatusMessage(null)
+
+    try {
+      await triggerRecoveryFileDownload(session)
+      setStatusMessage('Recovery file exported. Store it somewhere safe.')
+    } catch (caughtError) {
+      setError(getErrorMessage(caughtError))
+    }
+  }, [session])
 
   const prepareTransfer = useCallback(
     async (asset: WalletAsset, recipient: string, amount: string) => {
@@ -194,15 +239,18 @@ export function useWalletState() {
     createWallet,
     disconnectWallet,
     error,
+    exportRecoveryFile,
     hasSavedSession: Boolean(loadWalletSession()),
     isCreating,
     isPreparing,
     isRefreshing,
+    isRestoringFromFile,
     isSending,
     network,
     prepareTransfer,
     quote,
     reconnectWallet,
+    restoreFromRecoveryFile,
     refreshCurrentWallet: session ? () => refresh(session) : undefined,
     result,
     selectedChainId,
