@@ -1,15 +1,36 @@
-import { privateKeyToAccount } from 'viem/accounts'
+import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts'
 import type { Hex } from 'viem'
 
 import type { WalletSession } from '../storage/walletSession'
 
-const MOCK_PRIVATE_KEY: Hex =
-  '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80'
+const env = import.meta.env
+
+const MOCK_PRIVATE_KEY = getMockPrivateKey()
 
 const MOCK_CREDENTIAL_ID = 'mock-passkey-credential'
 
+function getMockPrivateKey(): Hex {
+  const envPrivateKey = env.VITE_MOCK_PRIVATE_KEY?.trim()
+
+  if (isPrivateKey(envPrivateKey)) {
+    return envPrivateKey
+  }
+
+  const privateKey = generatePrivateKey()
+
+  console.info(
+    `[mock-passkey] Generated private key. Add this to .env.development to reuse it:\nVITE_MOCK_PRIVATE_KEY=${privateKey}`,
+  )
+
+  return privateKey
+}
+
+function isPrivateKey(value: string | undefined): value is Hex {
+  return /^0x[a-fA-F0-9]{64}$/.test(value ?? '')
+}
+
 export function isMockPasskeyEnabled() {
-  return import.meta.env.VITE_MOCK_PASSKEY === 'true'
+  return env.VITE_MOCK_PASSKEY === 'true'
 }
 
 export function createMockSession(label: string): WalletSession {
