@@ -1,73 +1,27 @@
-# React + TypeScript + Vite
+# Passkey Wallet
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Passkey Wallet is a Vite + React app for experimenting with passkey-based wallet flows.
 
-Currently, two official plugins are available:
+## Getting Started
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+1. Install dependencies with `npm install`.
+2. Create a local env file with `cp .env.development.example .env.development`.
+3. Start the app with `npm run dev`.
 
-## React Compiler
+## Development Environment
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+`.env.development` is intentionally ignored by Git so local values stay on your machine. Commit changes to `.env.development.example` when the set of supported variables changes.
 
-## Expanding the ESLint configuration
+Current development env variables:
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- `VITE_MOCK_PASSKEY=true` enables the mock passkey flow.
+- `VITE_MOCK_PRIVATE_KEY=` is optional. Leave it blank to generate a random mock private key at startup.
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+When `VITE_MOCK_PRIVATE_KEY` is not set, the app prints a generated value to the browser console in a copy-pasteable format so it can be added back to `.env.development` and reused across restarts.
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+## Scripts
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
-
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+- `npm run dev` starts the Vite dev server.
+- `npm run build` creates a production build.
+- `npm run lint` runs ESLint.
+- `npm run test` runs the test suite once.
