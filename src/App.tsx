@@ -20,6 +20,7 @@ type BarcodeDetectorConstructorLike = {
 }
 
 const ADDRESS_QR_PATTERN = /0x[a-fA-F0-9]{40}/
+const FAVICON_URL = `${import.meta.env.BASE_URL}favicon.svg`
 const SEND_STEP_LABELS: Array<{ id: SendStep; label: string }> = [
   { id: 'asset', label: 'Asset' },
   { id: 'recipient', label: 'Recipient' },
@@ -61,7 +62,7 @@ function parseRecipientFromQr(rawValue: string) {
 function Brand({ onClick }: { onClick?: () => void }) {
   const content = (
     <>
-      <img className="brand-logo" src="/favicon.svg" alt="" aria-hidden="true" />
+      <img className="brand-logo" src={FAVICON_URL} alt="" aria-hidden="true" />
       <span>WebWallet</span>
     </>
   )
