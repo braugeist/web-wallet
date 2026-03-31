@@ -459,8 +459,15 @@ button:disabled {
   }
 
   .topbar {
-    flex-direction: column;
-    align-items: stretch;
+    align-items: center;
+  }
+
+  .topbar-left {
+    flex: 1;
+  }
+
+  .settings-trigger {
+    align-self: center;
   }
 
   .button-row {
