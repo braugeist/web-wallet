@@ -526,36 +526,51 @@ function App() {
           </div>
         ) : null}
         {activeScreen === 'assets' ? (
-          <div className="asset-list">
-            {balances.map((balance) => (
-              <article
-                className="asset-row clickable"
-                key={balance.asset.type === 'native' ? 'native' : balance.asset.address}
-                role="button"
-                tabIndex={0}
-                onClick={() => {
-                  handleSelectedAssetChange(getAssetKey(balance.asset), 'recipient')
-                  setActiveScreen('send')
-                }}
-              >
-                <div>
-                  <p className="asset-symbol">{balance.asset.symbol}</p>
-                  <p className="muted">{balance.asset.name}</p>
-                </div>
-                <div className="asset-value">
-                  {formatAmount(balance.value, balance.asset.decimals)} {balance.asset.symbol}
-                </div>
-              </article>
-            ))}
+          <div className="screen-content">
+            <div className="screen-copy">
+              <p className="screen-eyebrow">Portfolio</p>
+              <h1 className="screen-title">Assets</h1>
+              <p className="screen-subtitle">Tap any balance to start a transfer.</p>
+            </div>
+
+            <div className="asset-list">
+              {balances.map((balance) => (
+                <article
+                  className="asset-row clickable"
+                  key={balance.asset.type === 'native' ? 'native' : balance.asset.address}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => {
+                    handleSelectedAssetChange(getAssetKey(balance.asset), 'recipient')
+                    setActiveScreen('send')
+                  }}
+                >
+                  <div>
+                    <p className="asset-symbol">{balance.asset.symbol}</p>
+                    <p className="muted">{balance.asset.name}</p>
+                  </div>
+                  <div className="asset-value">
+                    {formatAmount(balance.value, balance.asset.decimals)} {balance.asset.symbol}
+                  </div>
+                </article>
+              ))}
+            </div>
           </div>
         ) : null}
 
         {activeScreen === 'receive' && address ? (
-          <div className="receive-content">
+          <div className="screen-content receive-content">
+            <div className="screen-copy screen-copy-center">
+              <p className="screen-eyebrow">Receive</p>
+              <h1 className="screen-title">Share your address</h1>
+              <p className="screen-subtitle">Use the QR code or copy the wallet address below.</p>
+            </div>
+
             <div className="qr-card">
               <QRCodeSVG value={address} size={176} bgColor="#ffffff" fgColor="#000000" />
             </div>
-            <div className="card-stack">
+
+            <div className="card-stack receive-details">
               <p className="muted">{network.label}</p>
               <div className={addressCopied ? 'block-code address-copy-field copied' : 'block-code address-copy-field'}>
                 <code>{address}</code>
@@ -574,7 +589,13 @@ function App() {
         ) : null}
 
         {activeScreen === 'send' ? (
-          <div className="card-stack">
+          <div className="screen-content send-content">
+            <div className="screen-copy">
+              <p className="screen-eyebrow">Transfer</p>
+              <h1 className="screen-title">Send</h1>
+              <p className="screen-subtitle">Move through the steps below to review and confirm the transfer.</p>
+            </div>
+
             <div className="send-stepper" role="list" aria-label="Send steps">
               {SEND_STEP_LABELS.map((step, index) => {
                 const stepNumber = index + 1

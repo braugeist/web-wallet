@@ -1,19 +1,19 @@
 :root {
   color-scheme: light;
-  --background: #ffffff;
-  --background-elevated: #ffffff;
-  --border: rgba(0, 0, 0, 0.08);
-  --border-strong: rgba(0, 0, 0, 0.2);
+  --background: #fcfbf8;
+  --background-elevated: rgba(255, 255, 255, 0.92);
+  --border: rgba(15, 23, 42, 0.08);
+  --border-strong: rgba(15, 23, 42, 0.16);
   --danger: #e53935;
-  --foreground: #000000;
-  --muted: rgba(0, 0, 0, 0.45);
+  --foreground: #111111;
+  --muted: rgba(17, 17, 17, 0.52);
   --panel-shadow: none;
   --success: #2e7d32;
-  --surface: #f5f5f5;
-  --surface-soft: #ebebeb;
+  --surface: rgba(17, 17, 17, 0.045);
+  --surface-soft: rgba(17, 17, 17, 0.075);
   --warning: #f57f17;
-  --accent: #000000;
-  --accent-strong: #000000;
+  --accent: #111111;
+  --accent-strong: #111111;
   font-family:
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-synthesis: none;
@@ -37,7 +37,9 @@ body,
 body {
   margin: 0;
   color: var(--foreground);
-  background: var(--background);
+  background:
+    radial-gradient(circle at top, rgba(17, 17, 17, 0.03), transparent 34%),
+    var(--background);
 }
 
 button,
@@ -77,16 +79,16 @@ strong {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 20px 20px 120px;
+  padding: 28px 24px 120px;
 }
 
 /* Shell */
 .app-shell {
-  width: min(480px, 100%);
+  width: min(560px, 100%);
   flex: 1 1 auto;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 18px;
 }
 
 .app-center {
@@ -98,9 +100,9 @@ strong {
 
 /* Brand */
 .brand {
-  font-size: 1.25rem;
+  font-size: 1.85rem;
   font-weight: 700;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.06em;
 }
 
 /* Topbar */
@@ -109,32 +111,32 @@ strong {
   justify-content: space-between;
   align-items: center;
   gap: 12px;
-  padding: 14px 18px;
-  border: 1px solid var(--border);
-  background: var(--background);
-  border-radius: 16px;
+  padding: 0 0 18px;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
 }
 
 .topbar-left {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 6px;
   min-width: 0;
 }
 
 .topbar-meta {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 0.8rem;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 0.9rem;
 }
 
 .topbar-network {
   all: unset;
   cursor: pointer;
   color: var(--muted);
-  font-weight: 500;
-  font-size: 0.8rem;
+  font-weight: 600;
+  font-size: 0.85rem;
   white-space: nowrap;
   transition: color 0.15s;
 }
@@ -147,7 +149,7 @@ strong {
   all: unset;
   cursor: pointer;
   font-family: 'SFMono-Regular', ui-monospace, monospace;
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   color: var(--muted);
   transition: color 0.15s;
   white-space: nowrap;
@@ -160,29 +162,48 @@ strong {
 }
 
 .settings-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  min-height: 40px;
   font-size: 1.15rem;
   line-height: 1;
-  padding: 0 10px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: var(--surface);
+}
+
+.settings-trigger:hover {
+  background: var(--surface-soft);
 }
 
 .app-menu {
   position: absolute;
-  inset: 0;
-  z-index: 10;
+  top: 0;
+  right: 0;
+  z-index: 20;
   display: grid;
-  gap: 6px;
-  align-content: start;
+  gap: 2px;
+  width: min(300px, calc(100vw - 48px));
+  max-height: min(420px, calc(100dvh - 180px));
   overflow-y: auto;
-  padding: 20px;
-  border-radius: 16px;
-  background: var(--background);
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  background: var(--background-elevated);
+  box-shadow: 0 20px 48px rgba(15, 23, 42, 0.12);
+  backdrop-filter: blur(18px);
 }
 
 .app-menu-title {
-  font-size: 0.85rem;
-  font-weight: 600;
+  padding: 4px 8px 8px;
+  font-size: 0.72rem;
+  font-weight: 700;
   color: var(--muted);
-  margin-bottom: 2px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .app-menu-action {
@@ -190,45 +211,51 @@ strong {
   cursor: pointer;
   display: flex;
   align-items: center;
-  padding: 12px 14px;
-  border: 1px solid var(--border);
+  width: 100%;
+  padding: 12px 10px;
   border-radius: 12px;
   font-size: 0.95rem;
   font-weight: 500;
   color: var(--foreground);
-  background: var(--surface);
-  transition: border-color 0.15s, background 0.15s;
+  background: transparent;
+  transition: background 0.15s, color 0.15s;
 }
 
 .app-menu-action:hover {
-  border-color: var(--border-strong);
-  background: var(--surface-soft);
+  background: var(--surface);
 }
 
 .app-menu-action.active {
-  border-color: var(--border-strong);
   background: var(--surface-soft);
+  font-weight: 600;
 }
 
 /* Network picker overlay */
 .network-picker {
   position: absolute;
-  inset: 0;
-  z-index: 10;
+  top: 0;
+  left: 0;
+  z-index: 20;
   display: grid;
-  gap: 6px;
-  align-content: start;
+  gap: 2px;
+  width: min(320px, calc(100vw - 48px));
+  max-height: min(320px, calc(100dvh - 180px));
   overflow-y: auto;
-  padding: 20px;
-  border-radius: 16px;
-  background: var(--background);
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  background: var(--background-elevated);
+  box-shadow: 0 20px 48px rgba(15, 23, 42, 0.12);
+  backdrop-filter: blur(18px);
 }
 
 .network-picker-title {
-  font-size: 0.85rem;
-  font-weight: 600;
+  padding: 4px 8px 8px;
+  font-size: 0.72rem;
+  font-weight: 700;
   color: var(--muted);
-  margin-bottom: 2px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .network-option {
@@ -236,64 +263,104 @@ strong {
   cursor: pointer;
   display: flex;
   align-items: center;
-  padding: 12px 14px;
-  border: 1px solid var(--border);
+  width: 100%;
+  padding: 12px 10px;
   border-radius: 12px;
   font-size: 0.95rem;
   font-weight: 500;
   color: var(--foreground);
-  background: var(--surface);
-  transition: border-color 0.15s, background 0.15s;
+  background: transparent;
+  transition: background 0.15s, color 0.15s;
 }
 
 .network-option:hover {
-  background: var(--surface-soft);
+  background: var(--surface);
 }
 
 .network-option.active {
-  border-color: var(--border-strong);
   background: var(--surface-soft);
+  font-weight: 600;
 }
 
 /* Panel */
 .panel {
-  padding: 20px;
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  background: var(--background);
+  padding: 0;
+  border: 0;
+  background: transparent;
 }
 
 .screen-panel {
   position: relative;
   flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding-top: 4px;
+}
+
+.screen-content {
+  display: grid;
+  gap: 24px;
+}
+
+.send-content {
+  gap: 20px;
+}
+
+.screen-copy {
+  display: grid;
+  gap: 6px;
+}
+
+.screen-copy-center {
+  justify-items: center;
+  text-align: center;
+}
+
+.screen-eyebrow {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.screen-title {
+  font-size: clamp(1.5rem, 4vw, 2rem);
+  line-height: 1.05;
+  letter-spacing: -0.05em;
+}
+
+.screen-subtitle {
+  max-width: 34ch;
+  color: var(--muted);
 }
 
 .send-stepper {
   display: flex;
-  gap: 8px;
+  gap: 16px;
   overflow-x: auto;
-  padding-bottom: 2px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border);
 }
 
 .send-step {
-  flex: 1 0 78px;
-  display: grid;
-  justify-items: center;
-  gap: 6px;
-  padding: 10px 8px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: var(--surface);
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 0 10px;
+  border-bottom: 2px solid transparent;
   color: var(--muted);
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   font-weight: 600;
-  text-align: center;
+  text-align: left;
 }
 
 .send-step.active,
 .send-step.completed {
   color: var(--foreground);
-  border-color: var(--border-strong);
+  border-bottom-color: var(--accent);
 }
 
 .send-step-number {
@@ -303,25 +370,21 @@ strong {
   width: 24px;
   height: 24px;
   border-radius: 999px;
-  background: var(--background);
-  border: 1px solid var(--border);
+  background: var(--surface);
   font-size: 0.75rem;
 }
 
 .send-step.active .send-step-number,
 .send-step.completed .send-step-number {
-  border-color: transparent;
   background: var(--foreground);
   color: var(--background);
 }
 
 .send-step-panel {
   display: grid;
-  gap: 14px;
-  padding: 16px;
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  background: var(--surface);
+  gap: 20px;
+  padding: 0;
+  background: transparent;
 }
 
 .send-step-header {
@@ -329,6 +392,8 @@ strong {
   justify-content: space-between;
   align-items: flex-start;
   gap: 12px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border);
 }
 
 .send-step-kicker {
@@ -340,8 +405,9 @@ strong {
 }
 
 .send-step-title {
-  font-size: 1.05rem;
+  font-size: 1.2rem;
   font-weight: 700;
+  letter-spacing: -0.03em;
 }
 
 /* Buttons */
@@ -358,31 +424,30 @@ strong {
 input,
 select,
 button {
-  border-radius: 12px;
-  border: 1px solid var(--border);
+  border-radius: 999px;
+  border: 1px solid transparent;
   background: var(--surface);
   color: var(--foreground);
-  min-height: 44px;
-  padding: 0 14px;
+  min-height: 46px;
+  padding: 0 16px;
+  transition: border-color 0.15s, background 0.15s, color 0.15s, opacity 0.15s;
 }
 
 button {
-  border-color: transparent;
-  background: #000000;
+  background: #111111;
   color: #ffffff;
   font-weight: 600;
 }
 
 .button-secondary {
-  border-color: var(--border);
   background: var(--surface);
   color: var(--foreground);
   font-weight: 500;
 }
 
 .button-sm {
-  min-height: 36px;
-  padding: 0 10px;
+  min-height: 40px;
+  padding: 0 12px;
   font-size: 0.85rem;
 }
 
@@ -394,7 +459,7 @@ button:disabled {
 /* Fields */
 .field {
   display: grid;
-  gap: 6px;
+  gap: 10px;
 }
 
 .field-input-action {
@@ -405,12 +470,15 @@ button:disabled {
 
 .field span {
   color: var(--muted);
-  font-size: 0.85rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .card-stack {
   display: grid;
-  gap: 14px;
+  gap: 18px;
 }
 
 .scan-button {
@@ -429,32 +497,31 @@ button:disabled {
 
 /* Banners */
 .banner {
-  border-radius: 12px;
-  border: 1px solid var(--border);
-  padding: 12px 16px;
-  background: var(--background);
-  font-size: 0.9rem;
+  border-left: 2px solid var(--border);
+  padding: 2px 0 2px 14px;
+  font-size: 0.92rem;
 }
 
 .banner.success {
   color: var(--success);
-  border-color: rgba(46, 125, 50, 0.2);
+  border-left-color: rgba(46, 125, 50, 0.45);
 }
 
 .banner.error {
   color: var(--danger);
-  border-color: rgba(229, 57, 53, 0.2);
+  border-left-color: rgba(229, 57, 53, 0.45);
 }
 
 .banner.warning {
   color: var(--warning);
-  border-color: rgba(245, 127, 23, 0.2);
+  border-left-color: rgba(245, 127, 23, 0.45);
 }
 
 /* Assets */
 .asset-list {
   display: grid;
-  gap: 10px;
+  gap: 0;
+  border-top: 1px solid var(--border);
 }
 
 .asset-row {
@@ -462,25 +529,25 @@ button:disabled {
   justify-content: space-between;
   align-items: center;
   gap: 16px;
-  padding: 14px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: var(--surface);
+  margin: 0 -8px;
+  padding: 18px 12px;
+  border-bottom: 1px solid var(--border);
+  border-radius: 16px;
+  background: transparent;
 }
 
 .asset-row.clickable {
   cursor: pointer;
-  transition: border-color 0.15s, background 0.15s;
+  transition: background 0.15s, transform 0.15s;
 }
 
 .asset-row.clickable:hover {
-  border-color: var(--border-strong);
-  background: var(--surface-soft);
+  background: var(--surface);
+  transform: translateX(2px);
 }
 
 .asset-row.selected {
-  border-color: var(--border-strong);
-  background: var(--surface-soft);
+  background: var(--surface);
 }
 
 .asset-symbol {
@@ -496,39 +563,41 @@ button:disabled {
 
 /* Receive */
 .receive-content {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 18px;
+  justify-items: center;
+}
+
+.receive-details {
+  width: min(100%, 34rem);
+  justify-self: stretch;
 }
 
 .qr-card {
   display: inline-flex;
   justify-content: center;
   align-items: center;
-  padding: 18px;
-  border-radius: 14px;
-  border: 1px solid var(--border);
-  background: var(--background);
+  justify-self: center;
+  padding: 24px;
+  border-radius: 28px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), var(--surface));
+  box-shadow: inset 0 0 0 1px rgba(17, 17, 17, 0.06);
 }
 
 .block-code {
   display: block;
   overflow-wrap: anywhere;
-  padding: 12px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: var(--surface);
-  font-size: 0.85rem;
+  padding: 16px 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  font-size: 0.9rem;
   font-family: 'SFMono-Regular', ui-monospace, monospace;
 }
 
 .address-copy-field {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
   width: 100%;
-  transition: border-color 0.15s, background 0.15s;
+  transition: border-color 0.15s;
 }
 
 .address-copy-field code {
@@ -546,25 +615,24 @@ button:disabled {
   align-items: center;
   justify-content: center;
   flex: 0 0 auto;
-  min-height: 32px;
-  width: 32px;
+  min-height: 36px;
+  width: 36px;
   padding: 0;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--surface-soft);
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
   color: var(--muted);
-  transition: color 0.15s, border-color 0.15s, background 0.15s;
+  transition: color 0.15s, background 0.15s;
 }
 
 .copy-address-button:hover {
   color: var(--foreground);
-  border-color: var(--border-strong);
+  background: var(--surface);
 }
 
 .address-copy-field.copied .copy-address-button {
   color: var(--foreground);
-  border-color: var(--border-strong);
-  background: var(--background);
+  background: var(--surface);
 }
 
 .copy-address-button svg {
@@ -662,14 +730,12 @@ button:disabled {
 .callout {
   display: grid;
   gap: 6px;
-  padding: 14px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: var(--surface);
+  padding: 2px 0 2px 14px;
+  border-left: 2px solid var(--border);
 }
 
 .callout.success {
-  border-color: rgba(46, 125, 50, 0.25);
+  border-left-color: rgba(46, 125, 50, 0.45);
 }
 
 .muted {
@@ -679,6 +745,10 @@ button:disabled {
 @media (max-width: 520px) {
   #root {
     padding: 12px 12px 112px;
+  }
+
+  .brand {
+    font-size: 1.6rem;
   }
 
   .topbar {
@@ -702,10 +772,15 @@ button:disabled {
   }
 
   .send-step {
-    flex-basis: 92px;
+    padding-bottom: 8px;
   }
 
   .send-step-header {
     flex-direction: column;
+  }
+
+  .app-menu,
+  .network-picker {
+    width: min(100%, calc(100vw - 24px));
   }
 }
