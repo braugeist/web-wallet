@@ -58,6 +58,15 @@ function parseRecipientFromQr(rawValue: string) {
   return matchedAddress && isAddress(matchedAddress) ? getAddress(matchedAddress) : null
 }
 
+function Brand() {
+  return (
+    <div className="brand">
+      <img className="brand-logo" src="/favicon.svg" alt="" aria-hidden="true" />
+      <span>WebWallet</span>
+    </div>
+  )
+}
+
 function App() {
   const {
     address,
@@ -402,7 +411,7 @@ function App() {
   if (!session) {
     return (
       <main className="app-shell app-center">
-        <div className="brand">WebWallet</div>
+        <Brand />
         <div className="button-row onboarding-actions">
           <button onClick={() => void createWallet()} disabled={isCreating}>
             {isCreating ? 'Creating...' : 'Create new wallet'}
@@ -437,7 +446,7 @@ function App() {
     <main className="app-shell">
       <header className="topbar">
         <div className="topbar-left">
-          <div className="brand">WebWallet</div>
+          <Brand />
           <div className="topbar-meta">
             <button
               className="topbar-network"

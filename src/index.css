@@ -100,9 +100,18 @@ strong {
 
 /* Brand */
 .brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
   font-size: 1.85rem;
   font-weight: 700;
   letter-spacing: -0.06em;
+}
+
+.brand-logo {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
 }
 
 /* Topbar */
