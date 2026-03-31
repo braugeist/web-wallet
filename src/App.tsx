@@ -98,7 +98,9 @@ function App() {
   const [qrScannerError, setQrScannerError] = useState<string | null>(null)
   const [qrScannerReady, setQrScannerReady] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
+  const menuTriggerRef = useRef<HTMLButtonElement>(null)
   const networkPickerRef = useRef<HTMLDivElement>(null)
+  const networkTriggerRef = useRef<HTMLButtonElement>(null)
   const qrVideoRef = useRef<HTMLVideoElement>(null)
   const qrStreamRef = useRef<MediaStream | null>(null)
   const qrAnimationFrameRef = useRef<number | null>(null)
@@ -122,10 +124,21 @@ function App() {
     const open = menuOpen || networkPickerOpen
     if (!open) return
     function handleClick(event: MouseEvent) {
-      if (menuOpen && menuRef.current && !menuRef.current.contains(event.target as Node)) {
+      const target = event.target as Node
+      if (
+        menuOpen
+        && menuRef.current
+        && !menuRef.current.contains(target)
+        && !menuTriggerRef.current?.contains(target)
+      ) {
         setMenuOpen(false)
       }
-      if (networkPickerOpen && networkPickerRef.current && !networkPickerRef.current.contains(event.target as Node)) {
+      if (
+        networkPickerOpen
+        && networkPickerRef.current
+        && !networkPickerRef.current.contains(target)
+        && !networkTriggerRef.current?.contains(target)
+      ) {
         setNetworkPickerOpen(false)
       }
     }
@@ -428,6 +441,7 @@ function App() {
           <div className="topbar-meta">
             <button
               className="topbar-network"
+              ref={networkTriggerRef}
               onClick={handleToggleNetworkPicker}
             >
               {network.label}
@@ -445,6 +459,7 @@ function App() {
         </div>
         <button
           className="button-secondary button-sm settings-trigger"
+          ref={menuTriggerRef}
           onClick={handleToggleMenu}
           aria-label="Open menu"
         >
