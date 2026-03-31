@@ -171,11 +171,18 @@ export function useWalletState() {
     }
   }, [session])
 
+  const resetTransfer = useCallback(() => {
+    setQuote(null)
+    setResult(null)
+    setError(null)
+    setStatusMessage(null)
+  }, [])
+
   const prepareTransfer = useCallback(
     async (asset: WalletAsset, recipient: string, amount: string) => {
       if (!session) {
         setError('Create or restore a wallet first.')
-        return
+        return null
       }
 
       setIsPreparing(true)
@@ -195,8 +202,10 @@ export function useWalletState() {
 
         setQuote(nextQuote)
         setStatusMessage('Transfer preview is ready. Confirm to sign with your passkey.')
+        return nextQuote
       } catch (caughtError) {
         setError(getErrorMessage(caughtError))
+        return null
       } finally {
         setIsPreparing(false)
       }
@@ -207,7 +216,7 @@ export function useWalletState() {
   const sendTransfer = useCallback(async () => {
     if (!session || !quote) {
       setError('Prepare a transfer before sending it.')
-      return
+      return null
     }
 
     setIsSending(true)
@@ -225,8 +234,10 @@ export function useWalletState() {
       setResult(nextResult)
       setStatusMessage(nextResult.success ? 'Transfer confirmed on-chain.' : 'Transfer reverted.')
       await refresh(session)
+      return nextResult
     } catch (caughtError) {
       setError(getErrorMessage(caughtError))
+      return null
     } finally {
       setIsSending(false)
     }
@@ -250,6 +261,7 @@ export function useWalletState() {
     prepareTransfer,
     quote,
     reconnectWallet,
+    resetTransfer,
     restoreFromRecoveryFile,
     refreshCurrentWallet: session ? () => refresh(session) : undefined,
     result,

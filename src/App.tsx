@@ -5,9 +5,10 @@ import { getAddress, isAddress } from 'viem'
 import { formatAmount } from './lib/utils/amounts'
 import { truncateAddress, getTransactionExplorerUrl } from './lib/utils/format'
 import { useWalletState } from './state/useWalletState'
-import type { WalletAsset, TransferQuote } from './lib/chains/types'
+import type { TransferQuote, TransferResult, WalletAsset } from './lib/chains/types'
 
 type Tab = 'assets' | 'receive' | 'send'
+type SendStep = 'asset' | 'recipient' | 'amount' | 'preview' | 'confirm'
 
 type BarcodeDetectorLike = {
   detect(source: CanvasImageSource): Promise<Array<{ rawValue?: string }>>
@@ -19,9 +20,20 @@ type BarcodeDetectorConstructorLike = {
 }
 
 const ADDRESS_QR_PATTERN = /0x[a-fA-F0-9]{40}/
+const SEND_STEP_LABELS: Array<{ id: SendStep; label: string }> = [
+  { id: 'asset', label: 'Asset' },
+  { id: 'recipient', label: 'Recipient' },
+  { id: 'amount', label: 'Amount' },
+  { id: 'preview', label: 'Preview' },
+  { id: 'confirm', label: 'Confirm' },
+]
 
 function getAssetKey(asset: WalletAsset) {
   return asset.type === 'native' ? `native:${asset.chainId}` : `erc20:${asset.address}`
+}
+
+function getSendStepNumber(step: SendStep) {
+  return SEND_STEP_LABELS.findIndex((entry) => entry.id === step) + 1
 }
 
 function parseRecipientFromQr(rawValue: string) {
@@ -62,6 +74,7 @@ function App() {
     network,
     prepareTransfer,
     quote,
+    resetTransfer,
     restoreFromRecoveryFile,
     refreshCurrentWallet,
     result,
@@ -74,6 +87,7 @@ function App() {
 
   const [tab, setTab] = useState<Tab>('assets')
   const [selectedAssetKey, setSelectedAssetKey] = useState(() => getAssetKey(assets[0]))
+  const [sendStep, setSendStep] = useState<SendStep>('asset')
   const [recipient, setRecipient] = useState('')
   const [amount, setAmount] = useState('')
   const [fileInputKey, setFileInputKey] = useState(0)
@@ -89,6 +103,20 @@ function App() {
   const qrStreamRef = useRef<MediaStream | null>(null)
   const qrAnimationFrameRef = useRef<number | null>(null)
   const qrDetectorRef = useRef<BarcodeDetectorLike | null>(null)
+
+  useEffect(() => {
+    if (!assets.some((asset) => getAssetKey(asset) === selectedAssetKey)) {
+      setSelectedAssetKey(getAssetKey(assets[0]))
+    }
+  }, [assets, selectedAssetKey])
+
+  useEffect(() => {
+    setSendStep('asset')
+    setRecipient('')
+    setAmount('')
+    resetTransfer()
+    setQrScannerOpen(false)
+  }, [resetTransfer, selectedChainId])
 
   useEffect(() => {
     const open = settingsOpen || networkPickerOpen
@@ -110,6 +138,20 @@ function App() {
     const timeoutId = window.setTimeout(() => setAddressCopied(false), 1500)
     return () => window.clearTimeout(timeoutId)
   }, [addressCopied])
+
+  const handleRecipientChange = useCallback((nextRecipient: string) => {
+    setRecipient(nextRecipient)
+    if (quote || result) {
+      resetTransfer()
+    }
+  }, [quote, resetTransfer, result])
+
+  const handleAmountChange = useCallback((nextAmount: string) => {
+    setAmount(nextAmount)
+    if (quote || result) {
+      resetTransfer()
+    }
+  }, [quote, resetTransfer, result])
 
   const stopQrScanner = useCallback(() => {
     if (qrAnimationFrameRef.current !== null) {
@@ -174,7 +216,7 @@ function App() {
           const scannedRecipient = parseRecipientFromQr(rawValue)
 
           if (scannedRecipient) {
-            setRecipient(scannedRecipient)
+            handleRecipientChange(scannedRecipient)
             setQrScannerError(null)
             setQrScannerOpen(false)
             return
@@ -263,9 +305,15 @@ function App() {
       cancelled = true
       stopQrScanner()
     }
-  }, [qrScannerOpen, stopQrScanner])
+  }, [handleRecipientChange, qrScannerOpen, stopQrScanner])
 
   const selectedAsset = assets.find((a) => getAssetKey(a) === selectedAssetKey) ?? assets[0]
+  const selectedBalance = balances.find((balance) => getAssetKey(balance.asset) === getAssetKey(selectedAsset))
+  const recipientValue = recipient.trim()
+  const amountValue = amount.trim()
+  const recipientIsValid = recipientValue.length > 0 && isAddress(recipientValue)
+  const normalizedRecipient = recipientIsValid ? getAddress(recipientValue) : null
+  const sendStepNumber = getSendStepNumber(sendStep)
   const resultUrl = result ? getTransactionExplorerUrl(network, result.transactionHash) : undefined
 
   async function handleCopyAddress() {
@@ -277,6 +325,40 @@ function App() {
     } catch {
       setAddressCopied(false)
     }
+  }
+
+  function handleSelectedAssetChange(nextAssetKey: string, nextStep?: SendStep) {
+    if (nextAssetKey !== selectedAssetKey) {
+      resetTransfer()
+    }
+    setSelectedAssetKey(nextAssetKey)
+    if (nextStep) {
+      setSendStep(nextStep)
+    }
+  }
+
+  async function handlePreviewTransfer() {
+    const nextQuote = await prepareTransfer(selectedAsset, recipientValue, amountValue)
+
+    if (nextQuote) {
+      setSendStep('preview')
+    }
+  }
+
+  async function handleConfirmTransfer() {
+    const nextResult = await sendTransfer()
+
+    if (nextResult) {
+      setSendStep('confirm')
+    }
+  }
+
+  function handleStartNewTransfer() {
+    resetTransfer()
+    setRecipient('')
+    setAmount('')
+    setQrScannerOpen(false)
+    setSendStep('asset')
   }
 
   if (!session) {
@@ -406,7 +488,7 @@ function App() {
                 role="button"
                 tabIndex={0}
                 onClick={() => {
-                  setSelectedAssetKey(getAssetKey(balance.asset))
+                  handleSelectedAssetChange(getAssetKey(balance.asset), 'recipient')
                   setTab('send')
                 }}
               >
@@ -447,66 +529,185 @@ function App() {
 
         {tab === 'send' ? (
           <div className="card-stack">
-            <label className="field">
-              <span>Asset</span>
-              <select
-                value={getAssetKey(selectedAsset)}
-                onChange={(event) => setSelectedAssetKey(event.target.value)}
-              >
-                {assets.map((asset) => (
-                  <option value={getAssetKey(asset)} key={getAssetKey(asset)}>
-                    {asset.symbol} {asset.type === 'native' ? '(native)' : ''}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <div className="send-stepper" role="list" aria-label="Send steps">
+              {SEND_STEP_LABELS.map((step, index) => {
+                const stepNumber = index + 1
+                const stateClass = stepNumber < sendStepNumber
+                  ? 'completed'
+                  : stepNumber === sendStepNumber
+                    ? 'active'
+                    : ''
 
-            <label className="field">
-              <span>Recipient</span>
-              <div className="field-input-action">
-                <input
-                  value={recipient}
-                  onChange={(event) => setRecipient(event.target.value)}
-                  placeholder="0x..."
-                />
-                <button
-                  type="button"
-                  className="button-secondary scan-button"
-                  onClick={() => setQrScannerOpen(true)}
-                >
-                  <ScanIcon />
-                  Scan QR
-                </button>
-              </div>
-            </label>
-
-            <label className="field">
-              <span>Amount</span>
-              <input
-                inputMode="decimal"
-                value={amount}
-                onChange={(event) => setAmount(event.target.value)}
-                placeholder={`0.0 ${selectedAsset.symbol}`}
-              />
-            </label>
-
-            <div className="button-row">
-              <button
-                onClick={() => void prepareTransfer(selectedAsset, recipient, amount)}
-                disabled={isPreparing || isSending}
-              >
-                {isPreparing ? 'Preparing...' : 'Preview'}
-              </button>
-              <button
-                className="button-secondary"
-                onClick={() => void sendTransfer()}
-                disabled={!quote || isPreparing || isSending}
-              >
-                {isSending ? 'Sending...' : 'Confirm'}
-              </button>
+                return (
+                  <div className={`send-step ${stateClass}`.trim()} key={step.id} role="listitem">
+                    <span className="send-step-number">{stepNumber}</span>
+                    <span>{step.label}</span>
+                  </div>
+                )
+              })}
             </div>
 
-            {renderQuote(quote)}
+            <div className="send-step-panel">
+              <div className="send-step-header">
+                <div>
+                  <p className="send-step-kicker">Step {sendStepNumber} of 5</p>
+                  <p className="send-step-title">{SEND_STEP_LABELS[sendStepNumber - 1]?.label}</p>
+                </div>
+                {selectedBalance ? (
+                  <p className="muted">
+                    Balance: {formatAmount(selectedBalance.value, selectedBalance.asset.decimals)} {selectedBalance.asset.symbol}
+                  </p>
+                ) : null}
+              </div>
+
+              {sendStep === 'asset' ? (
+                <div className="card-stack">
+                  <p className="muted">Choose which asset you want to send.</p>
+                  <div className="asset-list">
+                    {balances.map((balance) => {
+                      const assetKey = getAssetKey(balance.asset)
+                      const isSelected = assetKey === getAssetKey(selectedAsset)
+
+                      return (
+                        <article
+                          className={isSelected ? 'asset-row clickable selected' : 'asset-row clickable'}
+                          key={balance.asset.type === 'native' ? 'native' : balance.asset.address}
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => handleSelectedAssetChange(assetKey)}
+                        >
+                          <div>
+                            <p className="asset-symbol">
+                              {balance.asset.symbol} {balance.asset.type === 'native' ? '(native)' : ''}
+                            </p>
+                            <p className="muted">{balance.asset.name}</p>
+                          </div>
+                          <div className="asset-value">
+                            {formatAmount(balance.value, balance.asset.decimals)} {balance.asset.symbol}
+                          </div>
+                        </article>
+                      )
+                    })}
+                  </div>
+                  <div className="button-row">
+                    <button onClick={() => setSendStep('recipient')}>Continue</button>
+                  </div>
+                </div>
+              ) : null}
+
+              {sendStep === 'recipient' ? (
+                <div className="card-stack">
+                  <div className="callout">
+                    <p>
+                      Sending {selectedAsset.symbol} on {network.label}
+                    </p>
+                    <p className="muted">You can change the asset by going back.</p>
+                  </div>
+                  <label className="field">
+                    <span>Recipient</span>
+                    <div className="field-input-action">
+                      <input
+                        value={recipient}
+                        onChange={(event) => handleRecipientChange(event.target.value)}
+                        placeholder="0x..."
+                      />
+                      <button
+                        type="button"
+                        className="button-secondary scan-button"
+                        onClick={() => setQrScannerOpen(true)}
+                      >
+                        <ScanIcon />
+                        Scan QR
+                      </button>
+                    </div>
+                  </label>
+                  {recipientValue && !recipientIsValid ? (
+                    <div className="banner warning">Recipient must be a valid EVM address.</div>
+                  ) : null}
+                  <div className="button-row">
+                    <button className="button-secondary" onClick={() => setSendStep('asset')}>
+                      Back
+                    </button>
+                    <button disabled={!recipientIsValid} onClick={() => setSendStep('amount')}>
+                      Continue
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+
+              {sendStep === 'amount' ? (
+                <div className="card-stack">
+                  <div className="callout">
+                    <p>
+                      Recipient: {normalizedRecipient ? truncateAddress(normalizedRecipient) : 'Add a recipient'}
+                    </p>
+                    <p className="muted">Enter how much {selectedAsset.symbol} you want to send.</p>
+                  </div>
+                  <label className="field">
+                    <span>Amount</span>
+                    <input
+                      inputMode="decimal"
+                      value={amount}
+                      onChange={(event) => handleAmountChange(event.target.value)}
+                      placeholder={`0.0 ${selectedAsset.symbol}`}
+                    />
+                  </label>
+                  <div className="button-row">
+                    <button className="button-secondary" onClick={() => setSendStep('recipient')}>
+                      Back
+                    </button>
+                    <button
+                      onClick={() => void handlePreviewTransfer()}
+                      disabled={!amountValue || isPreparing || isSending}
+                    >
+                      {isPreparing ? 'Preparing...' : 'Preview transfer'}
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+
+              {sendStep === 'preview' ? (
+                <div className="card-stack">
+                  <p className="muted">Review the transfer details before moving to the final confirmation step.</p>
+                  {renderQuote(quote)}
+                  <div className="button-row">
+                    <button className="button-secondary" onClick={() => setSendStep('amount')}>
+                      Back
+                    </button>
+                    <button disabled={!quote} onClick={() => setSendStep('confirm')}>
+                      Continue to confirm
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+
+              {sendStep === 'confirm' ? (
+                <div className="card-stack">
+                  <p className="muted">Confirming will prompt the passkey signature and submit the transfer.</p>
+                  {quote ? renderQuote(quote) : null}
+                  {result ? (
+                    <div className="button-row">
+                      <button className="button-secondary" onClick={handleStartNewTransfer}>
+                        Start another transfer
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="button-row">
+                      <button className="button-secondary" onClick={() => setSendStep('preview')}>
+                        Back
+                      </button>
+                      <button
+                        onClick={() => void handleConfirmTransfer()}
+                        disabled={!quote || isPreparing || isSending}
+                      >
+                        {isSending ? 'Sending...' : 'Confirm transfer'}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : null}
+            </div>
+
             {renderResult(result, resultUrl)}
 
             {qrScannerOpen ? (
@@ -556,7 +757,7 @@ function renderQuote(quote: TransferQuote | null) {
   )
 }
 
-function renderResult(result: { success: boolean; userOperationHash: string } | null, resultUrl?: string) {
+function renderResult(result: TransferResult | null, resultUrl?: string) {
   if (!result) return null
 
   return (
