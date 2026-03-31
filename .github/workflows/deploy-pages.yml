@@ -21,16 +21,16 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version-file: .nvmrc
           cache: npm
 
       - name: Setup Pages
-        uses: actions/configure-pages@v5
+        uses: actions/configure-pages@v6
 
       - name: Install dependencies
         run: npm ci
@@ -40,10 +40,24 @@ jobs:
           PAGES_BASE_PATH: /${{ github.event.repository.name }}/
         run: npm run build
 
+      - name: Package artifact
+        run: |
+          tar \
+            --dereference --hard-dereference \
+            --directory dist \
+            -cvf "$RUNNER_TEMP/github-pages.tar" \
+            --exclude=.git \
+            --exclude=.github \
+            --exclude=".[^/]*" \
+            .
+
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-artifact@v6
         with:
-          path: ./dist
+          name: github-pages
+          path: ${{ runner.temp }}/github-pages.tar
+          retention-days: 1
+          if-no-files-found: error
 
   deploy:
     needs: build
@@ -55,4 +69,4 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
