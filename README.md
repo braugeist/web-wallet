@@ -1,6 +1,6 @@
-# Passkey Wallet
+# WebWallet
 
-Passkey Wallet is a Vite + React app for experimenting with passkey-based wallet flows.
+WebWallet is a Vite + React app that gives you a stand-alone blockchain wallet in your web browser.
 
 ## Getting Started
 
