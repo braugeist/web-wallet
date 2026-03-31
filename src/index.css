@@ -108,6 +108,20 @@ strong {
   letter-spacing: -0.06em;
 }
 
+.brand-button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.brand-button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+  border-radius: 10px;
+}
+
 .brand-logo {
   width: 28px;
   height: 28px;

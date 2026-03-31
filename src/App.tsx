@@ -58,13 +58,28 @@ function parseRecipientFromQr(rawValue: string) {
   return matchedAddress && isAddress(matchedAddress) ? getAddress(matchedAddress) : null
 }
 
-function Brand() {
-  return (
-    <div className="brand">
+function Brand({ onClick }: { onClick?: () => void }) {
+  const content = (
+    <>
       <img className="brand-logo" src="/favicon.svg" alt="" aria-hidden="true" />
       <span>WebWallet</span>
-    </div>
+    </>
   )
+
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        className="brand brand-button"
+        onClick={onClick}
+        aria-label="Go to assets"
+      >
+        {content}
+      </button>
+    )
+  }
+
+  return <div className="brand">{content}</div>
 }
 
 function App() {
@@ -353,6 +368,7 @@ function App() {
   function handleNavigate(nextScreen: AppScreen) {
     setActiveScreen(nextScreen)
     setMenuOpen(false)
+    setNetworkPickerOpen(false)
   }
 
   function handleToggleMenu() {
@@ -447,7 +463,7 @@ function App() {
     <main className="app-shell">
       <header className="topbar">
         <div className="topbar-left">
-          <Brand />
+          <Brand onClick={() => handleNavigate('assets')} />
           <div className="topbar-meta">
             <button
               className="topbar-network"
