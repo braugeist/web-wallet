@@ -4,9 +4,10 @@ WebWallet is a Vite + React app that gives you a stand-alone blockchain wallet i
 
 ## Getting Started
 
-1. Install dependencies with `npm install`.
-2. Create a local env file with `cp .env.development.example .env.development`.
-3. Start the app with `npm run dev`.
+1. Run `nvm install` once if needed, then `nvm use` to switch to the pinned Node version from `.nvmrc`.
+2. Install dependencies with `npm ci`.
+3. Create a local env file with `cp .env.development.example .env.development`.
+4. Start the app with `npm run dev`.
 
 ## Development Environment
 
