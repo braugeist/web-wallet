@@ -153,10 +153,6 @@ strong {
   color: var(--foreground);
 }
 
-.settings-wrapper {
-  position: relative;
-}
-
 .settings-trigger {
   font-size: 1.15rem;
   line-height: 1;
@@ -165,36 +161,41 @@ strong {
 
 .settings-menu {
   position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
+  inset: 0;
   z-index: 10;
-  min-width: 220px;
   display: grid;
   gap: 6px;
-  padding: 12px;
-  border: 1px solid var(--border);
-  border-radius: 14px;
+  padding: 20px;
+  border-radius: 18px;
   background: var(--background-elevated);
   backdrop-filter: blur(20px);
-  box-shadow: var(--panel-shadow);
 }
 
-.settings-menu select {
-  min-height: 36px;
-  padding: 0 10px;
+.settings-menu-title {
   font-size: 0.85rem;
-  width: 100%;
-}
-
-.settings-item {
-  margin: 0;
+  font-weight: 600;
+  color: var(--muted);
+  margin-bottom: 2px;
 }
 
 .settings-action {
-  width: 100%;
-  text-align: left;
-  font-size: 0.9rem;
-  min-height: 40px;
+  all: unset;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--foreground);
+  background: rgba(15, 23, 42, 0.5);
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.settings-action:hover {
+  border-color: var(--border-strong);
+  background: var(--surface-soft);
 }
 
 /* Network picker overlay */

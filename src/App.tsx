@@ -123,33 +123,13 @@ function App() {
             ) : null}
           </div>
         </div>
-        <div className="settings-wrapper" ref={settingsRef}>
-          <button
-            className="button-secondary button-sm settings-trigger"
-            onClick={() => setSettingsOpen((prev) => !prev)}
-            aria-label="Settings"
-          >
-            &#9881;
-          </button>
-          {settingsOpen ? (
-            <div className="settings-menu">
-              {refreshCurrentWallet ? (
-                <button
-                  className="button-secondary settings-action"
-                  onClick={() => { void refreshCurrentWallet(); setSettingsOpen(false) }}
-                >
-                  {isRefreshing ? 'Refreshing...' : 'Refresh balances'}
-                </button>
-              ) : null}
-              <button
-                className="button-secondary settings-action"
-                onClick={() => { void exportRecoveryFile(); setSettingsOpen(false) }}
-              >
-                Backup wallet
-              </button>
-            </div>
-          ) : null}
-        </div>
+        <button
+          className="button-secondary button-sm settings-trigger"
+          onClick={() => setSettingsOpen((prev) => !prev)}
+          aria-label="Settings"
+        >
+          &#9776;
+        </button>
       </header>
 
       {statusMessage ? <div className="banner success">{statusMessage}</div> : null}
@@ -182,6 +162,25 @@ function App() {
               onClick={() => { setSelectedChainId(1); setNetworkPickerOpen(false) }}
             >
               Ethereum Mainnet
+            </button>
+          </div>
+        ) : null}
+        {settingsOpen ? (
+          <div className="settings-menu" ref={settingsRef}>
+            <span className="settings-menu-title">Settings</span>
+            {refreshCurrentWallet ? (
+              <button
+                className="settings-action"
+                onClick={() => { void refreshCurrentWallet(); setSettingsOpen(false) }}
+              >
+                {isRefreshing ? 'Refreshing...' : 'Refresh balances'}
+              </button>
+            ) : null}
+            <button
+              className="settings-action"
+              onClick={() => { void exportRecoveryFile(); setSettingsOpen(false) }}
+            >
+              Backup wallet
             </button>
           </div>
         ) : null}
