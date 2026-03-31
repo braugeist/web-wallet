@@ -315,7 +315,6 @@ function App() {
   const normalizedRecipient = recipientIsValid ? getAddress(recipientValue) : null
   const sendStepNumber = getSendStepNumber(sendStep)
   const resultUrl = result ? getTransactionExplorerUrl(network, result.transactionHash) : undefined
-  const showFloatingSendButton = activeScreen !== 'send' && !menuOpen
 
   async function handleCopyAddress() {
     if (!address) return
@@ -456,7 +455,7 @@ function App() {
       {statusMessage ? <div className="banner success">{statusMessage}</div> : null}
       {error ? <div className="banner error">{error}</div> : null}
 
-      <section className={showFloatingSendButton ? 'panel screen-panel has-floating-send' : 'panel screen-panel'}>
+      <section className="panel screen-panel">
         {networkPickerOpen ? (
           <div className="network-picker" ref={networkPickerRef}>
             <span className="network-picker-title">Select network</span>
@@ -773,12 +772,6 @@ function App() {
         ) : null}
       </section>
 
-      {showFloatingSendButton ? (
-        <button className="floating-send-button" onClick={() => handleNavigate('send')}>
-          <SendIcon />
-          Send
-        </button>
-      ) : null}
     </main>
   )
 }
@@ -847,21 +840,6 @@ function ScanIcon() {
     <svg viewBox="0 0 24 24" aria-hidden="true">
       <path
         d="M7 4H5a1 1 0 0 0-1 1v2M17 4h2a1 1 0 0 1 1 1v2M20 17v2a1 1 0 0 1-1 1h-2M4 17v2a1 1 0 0 0 1 1h2M7 12h10"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  )
-}
-
-function SendIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path
-        d="M4 12 19 5l-3.5 14-4.5-5-7-.5Z"
         fill="none"
         stroke="currentColor"
         strokeWidth="1.8"
