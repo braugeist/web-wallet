@@ -212,7 +212,7 @@ function App() {
         {tab === 'receive' && address ? (
           <div className="receive-content">
             <div className="qr-card">
-              <QRCodeSVG value={address} size={176} bgColor="transparent" fgColor="currentColor" />
+              <QRCodeSVG value={address} size={176} bgColor="#ffffff" fgColor="#000000" />
             </div>
             <div className="card-stack">
               <p className="muted">{network.label}</p>
