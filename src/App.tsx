@@ -1,3 +1,4 @@
+import jsQR from 'jsqr'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
 import { getAddress, isAddress } from 'viem'
@@ -10,17 +11,26 @@ import type { TransferQuote, TransferResult, WalletAsset } from './lib/chains/ty
 type AppScreen = 'assets' | 'receive' | 'send' | 'backup'
 type SendStep = 'asset' | 'recipient' | 'amount' | 'preview' | 'confirm'
 
-type BarcodeDetectorLike = {
-  detect(source: CanvasImageSource): Promise<Array<{ rawValue?: string }>>
+type BarcodeDetectorResultLike = {
+  rawValue?: string
 }
 
-type BarcodeDetectorConstructorLike = {
-  new (options?: { formats?: string[] }): BarcodeDetectorLike
+type NativeBarcodeDetectorLike = {
+  detect(source: CanvasImageSource): Promise<BarcodeDetectorResultLike[]>
+}
+
+type NativeBarcodeDetectorConstructorLike = {
+  new (options?: { formats?: string[] }): NativeBarcodeDetectorLike
   getSupportedFormats?: () => Promise<string[]>
+}
+
+type QrCodeDetectorLike = {
+  detect(source: HTMLVideoElement): Promise<string | null>
 }
 
 const ADDRESS_QR_PATTERN = /0x[a-fA-F0-9]{40}/
 const FAVICON_URL = `${import.meta.env.BASE_URL}favicon.svg`
+const QR_SCAN_INTERVAL_MS = 150
 const SEND_STEP_LABELS: Array<{ id: SendStep; label: string }> = [
   { id: 'asset', label: 'Asset' },
   { id: 'recipient', label: 'Recipient' },
@@ -28,6 +38,63 @@ const SEND_STEP_LABELS: Array<{ id: SendStep; label: string }> = [
   { id: 'preview', label: 'Preview' },
   { id: 'confirm', label: 'Confirm' },
 ]
+
+function createJsQrDetector(): QrCodeDetectorLike {
+  const canvas = document.createElement('canvas')
+  const context = canvas.getContext('2d', { willReadFrequently: true })
+
+  if (!context) {
+    throw new Error('Could not initialize the QR scanner.')
+  }
+
+  return {
+    async detect(source) {
+      const width = source.videoWidth
+      const height = source.videoHeight
+
+      if (!width || !height) {
+        return null
+      }
+
+      if (canvas.width !== width) {
+        canvas.width = width
+      }
+
+      if (canvas.height !== height) {
+        canvas.height = height
+      }
+
+      context.drawImage(source, 0, 0, width, height)
+      const imageData = context.getImageData(0, 0, width, height)
+      return jsQR(imageData.data, width, height, { inversionAttempts: 'attemptBoth' })?.data ?? null
+    },
+  }
+}
+
+async function createQrDetector(): Promise<QrCodeDetectorLike> {
+  const BarcodeDetectorApi = (window as Window & { BarcodeDetector?: NativeBarcodeDetectorConstructorLike }).BarcodeDetector
+
+  if (!BarcodeDetectorApi) {
+    return createJsQrDetector()
+  }
+
+  const supportedFormats = BarcodeDetectorApi.getSupportedFormats
+    ? await BarcodeDetectorApi.getSupportedFormats()
+    : []
+
+  const nativeDetector = new BarcodeDetectorApi(
+    supportedFormats.length > 0 && supportedFormats.includes('qr_code')
+      ? { formats: ['qr_code'] }
+      : undefined,
+  )
+
+  return {
+    async detect(source) {
+      const detectedBarcodes = await nativeDetector.detect(source)
+      return detectedBarcodes.find((barcode) => barcode.rawValue)?.rawValue ?? null
+    },
+  }
+}
 
 function getAssetKey(asset: WalletAsset) {
   return asset.type === 'native' ? `native:${asset.chainId}` : `erc20:${asset.address}`
@@ -130,7 +197,7 @@ function App() {
   const qrVideoRef = useRef<HTMLVideoElement>(null)
   const qrStreamRef = useRef<MediaStream | null>(null)
   const qrAnimationFrameRef = useRef<number | null>(null)
-  const qrDetectorRef = useRef<BarcodeDetectorLike | null>(null)
+  const qrDetectorRef = useRef<QrCodeDetectorLike | null>(null)
 
   useEffect(() => {
     if (!assets.some((asset) => getAssetKey(asset) === selectedAssetKey)) {
@@ -224,6 +291,7 @@ function App() {
 
     let cancelled = false
     let scanPending = false
+    let lastScanAt = 0
 
     const scanFrame = async () => {
       if (cancelled) return
@@ -238,6 +306,14 @@ function App() {
         return
       }
 
+      const now = window.performance.now()
+      if (now - lastScanAt < QR_SCAN_INTERVAL_MS) {
+        qrAnimationFrameRef.current = window.requestAnimationFrame(() => {
+          void scanFrame()
+        })
+        return
+      }
+
       if (scanPending) {
         qrAnimationFrameRef.current = window.requestAnimationFrame(() => {
           void scanFrame()
@@ -246,10 +322,10 @@ function App() {
       }
 
       scanPending = true
+      lastScanAt = now
 
       try {
-        const detectedBarcodes = await detector.detect(videoElement)
-        const rawValue = detectedBarcodes.find((barcode) => barcode.rawValue)?.rawValue
+        const rawValue = await detector.detect(videoElement)
 
         if (rawValue) {
           const scannedRecipient = parseRecipientFromQr(rawValue)
@@ -275,28 +351,18 @@ function App() {
     }
 
     async function startQrScanner() {
-      const BarcodeDetectorApi = (window as Window & { BarcodeDetector?: BarcodeDetectorConstructorLike }).BarcodeDetector
+      if (!window.isSecureContext) {
+        setQrScannerError('Camera access requires HTTPS or localhost.')
+        return
+      }
 
       if (!navigator.mediaDevices?.getUserMedia) {
         setQrScannerError('Camera access is not available in this browser.')
         return
       }
 
-      if (!BarcodeDetectorApi) {
-        setQrScannerError('QR scanning is not supported in this browser.')
-        return
-      }
-
       try {
-        const supportedFormats = BarcodeDetectorApi.getSupportedFormats
-          ? await BarcodeDetectorApi.getSupportedFormats()
-          : []
-
-        qrDetectorRef.current = new BarcodeDetectorApi(
-          supportedFormats.length > 0 && supportedFormats.includes('qr_code')
-            ? { formats: ['qr_code'] }
-            : undefined,
-        )
+        qrDetectorRef.current = await createQrDetector()
 
         const stream = await navigator.mediaDevices.getUserMedia({
           video: {
@@ -314,6 +380,7 @@ function App() {
 
         const videoElement = qrVideoRef.current
         if (!videoElement) {
+          stream.getTracks().forEach((track) => track.stop())
           setQrScannerError('Could not start the camera preview.')
           return
         }
@@ -329,9 +396,13 @@ function App() {
       } catch (error) {
         if (cancelled) return
 
+        const errorName = error instanceof DOMException ? error.name : ''
         const message = error instanceof Error ? error.message : 'Could not open the camera.'
-        if (message.toLowerCase().includes('permission')) {
+
+        if (errorName === 'NotAllowedError' || message.toLowerCase().includes('permission')) {
           setQrScannerError('Camera permission was denied.')
+        } else if (errorName === 'NotReadableError' || message.toLowerCase().includes('could not start')) {
+          setQrScannerError('Could not start the camera. Close other camera apps or open this page in Safari.')
         } else {
           setQrScannerError(message)
         }
