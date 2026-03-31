@@ -115,7 +115,7 @@ function App() {
             {address ? (
               <button
                 className="topbar-address"
-                onClick={() => void navigator.clipboard.writeText(address)}
+                onClick={() => setTab('receive')}
                 title="Copy address"
               >
                 {truncateAddress(address)}

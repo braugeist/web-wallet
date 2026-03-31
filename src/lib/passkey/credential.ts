@@ -7,10 +7,15 @@ import { PublicKey } from 'ox'
 import { Authentication } from 'ox/webauthn'
 
 import type { WalletSession } from '../storage/walletSession'
+import { createMockOwner, createMockSession, isMockPasskeyEnabled } from './mock'
 
 const DEFAULT_RP_NAME = 'WebWallet'
 
 export function isPasskeySupported() {
+  if (isMockPasskeyEnabled()) {
+    return true
+  }
+
   return typeof window !== 'undefined' && window.isSecureContext && 'PublicKeyCredential' in window
 }
 
@@ -23,6 +28,10 @@ export function getRelyingPartyId() {
 }
 
 export async function registerPasskey(label: string) {
+  if (isMockPasskeyEnabled()) {
+    return createMockSession(label)
+  }
+
   const rpId = getRelyingPartyId()
   const credential = await createWebAuthnCredential({
     authenticatorSelection: {
@@ -58,6 +67,10 @@ function createVerificationChallenge() {
 }
 
 export async function verifyRecoveryPasskey(session: WalletSession) {
+  if (isMockPasskeyEnabled()) {
+    return
+  }
+
   const challenge = createVerificationChallenge()
   const response = await Authentication.sign({
     challenge,
@@ -80,6 +93,10 @@ export async function verifyRecoveryPasskey(session: WalletSession) {
 }
 
 export function restorePasskeyOwner(session: WalletSession) {
+  if (isMockPasskeyEnabled()) {
+    return createMockOwner()
+  }
+
   return toWebAuthnAccount({
     credential: session.credential,
     rpId: session.rpId,
