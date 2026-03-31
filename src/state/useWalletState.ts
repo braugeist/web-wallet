@@ -43,6 +43,7 @@ export function useWalletState() {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [isRestoringFromFile, setIsRestoringFromFile] = useState(false)
   const [isSending, setIsSending] = useState(false)
+  const [isExportingRecoveryFile, setIsExportingRecoveryFile] = useState(false)
 
   const network = useMemo(() => getSupportedNetwork(selectedChainId), [selectedChainId])
   const assets = useMemo(() => getCuratedAssets(selectedChainId), [selectedChainId])
@@ -160,6 +161,7 @@ export function useWalletState() {
       return
     }
 
+    setIsExportingRecoveryFile(true)
     setError(null)
     setStatusMessage(null)
 
@@ -168,6 +170,8 @@ export function useWalletState() {
       setStatusMessage('Recovery file exported. Store it somewhere safe.')
     } catch (caughtError) {
       setError(getErrorMessage(caughtError))
+    } finally {
+      setIsExportingRecoveryFile(false)
     }
   }, [session])
 
@@ -253,6 +257,7 @@ export function useWalletState() {
     exportRecoveryFile,
     hasSavedSession: Boolean(loadWalletSession()),
     isCreating,
+    isExportingRecoveryFile,
     isPreparing,
     isRefreshing,
     isRestoringFromFile,

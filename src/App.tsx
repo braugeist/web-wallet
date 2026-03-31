@@ -7,7 +7,7 @@ import { truncateAddress, getTransactionExplorerUrl } from './lib/utils/format'
 import { useWalletState } from './state/useWalletState'
 import type { TransferQuote, TransferResult, WalletAsset } from './lib/chains/types'
 
-type AppScreen = 'assets' | 'receive' | 'send'
+type AppScreen = 'assets' | 'receive' | 'send' | 'backup'
 type SendStep = 'asset' | 'recipient' | 'amount' | 'preview' | 'confirm'
 
 type BarcodeDetectorLike = {
@@ -76,6 +76,7 @@ function App() {
     error,
     exportRecoveryFile,
     isCreating,
+    isExportingRecoveryFile,
     isPreparing,
     isRefreshing,
     isRestoringFromFile,
@@ -518,6 +519,12 @@ function App() {
             >
               Receive
             </button>
+            <button
+              className={activeScreen === 'backup' ? 'app-menu-action active' : 'app-menu-action'}
+              onClick={() => handleNavigate('backup')}
+            >
+              Backup wallet
+            </button>
             {refreshCurrentWallet ? (
               <button
                 className="app-menu-action"
@@ -526,12 +533,6 @@ function App() {
                 {isRefreshing ? 'Refreshing...' : 'Refresh balances'}
               </button>
             ) : null}
-            <button
-              className="app-menu-action"
-              onClick={() => { void exportRecoveryFile(); setMenuOpen(false) }}
-            >
-              Backup wallet
-            </button>
           </div>
         ) : null}
         {activeScreen === 'assets' ? (
@@ -813,6 +814,56 @@ function App() {
                 </div>
               </div>
             ) : null}
+          </div>
+        ) : null}
+
+        {activeScreen === 'backup' ? (
+          <div className="screen-content backup-content">
+            <div className="screen-copy">
+              <p className="screen-eyebrow">Recovery</p>
+              <h1 className="screen-title">Back up your wallet</h1>
+              <p className="screen-subtitle">
+                Create a recovery file you can use to restore this wallet later with the original passkey.
+              </p>
+            </div>
+
+            <div className="backup-card">
+              <div className="card-stack">
+                <div className="backup-checklist" aria-label="Backup guidance">
+                  <div className="backup-checklist-item">
+                    <span className="backup-checklist-step">1</span>
+                    <div>
+                      <p>Download the recovery file from this screen.</p>
+                      <p className="muted">A JSON file will be saved to your device.</p>
+                    </div>
+                  </div>
+                  <div className="backup-checklist-item">
+                    <span className="backup-checklist-step">2</span>
+                    <div>
+                      <p>Move it to a safe place.</p>
+                      <p className="muted">Use encrypted storage or another location you control.</p>
+                    </div>
+                  </div>
+                  <div className="backup-checklist-item">
+                    <span className="backup-checklist-step">3</span>
+                    <div>
+                      <p>Test the restore flow when convenient.</p>
+                      <p className="muted">Use “Restore existing wallet” and choose the saved file.</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="button-row">
+                  <button
+                    type="button"
+                    onClick={() => void exportRecoveryFile()}
+                    disabled={isExportingRecoveryFile}
+                  >
+                    {isExportingRecoveryFile ? 'Creating backup...' : 'Create recovery file'}
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         ) : null}
       </section>
