@@ -1,7 +1,11 @@
 import { formatUnits, parseUnits } from 'viem'
 
+export function normalizeAmountInput(amount: string) {
+  return amount.replace(/,/g, '.')
+}
+
 export function parseAmountInput(amount: string, decimals: number) {
-  const normalized = amount.trim()
+  const normalized = normalizeAmountInput(amount).trim()
 
   if (!normalized) {
     throw new Error('Enter an amount.')

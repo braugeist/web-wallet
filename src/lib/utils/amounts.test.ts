@@ -1,10 +1,14 @@
 import { describe, expect, it } from 'vitest'
 
-import { formatAmount, parseAmountInput } from './amounts'
+import { formatAmount, normalizeAmountInput, parseAmountInput } from './amounts'
 
 describe('parseAmountInput', () => {
   it('parses decimal values using token decimals', () => {
     expect(parseAmountInput('1.25', 6)).toBe(1_250_000n)
+  })
+
+  it('accepts commas as decimal separators', () => {
+    expect(parseAmountInput('1,25', 6)).toBe(1_250_000n)
   })
 
   it('rejects empty amounts', () => {
@@ -17,6 +21,12 @@ describe('parseAmountInput', () => {
 
   it('rejects zero amounts', () => {
     expect(() => parseAmountInput('0', 18)).toThrow('Amount must be greater than zero.')
+  })
+})
+
+describe('normalizeAmountInput', () => {
+  it('rewrites commas to dots for decimal keyboards', () => {
+    expect(normalizeAmountInput('1,25')).toBe('1.25')
   })
 })
 

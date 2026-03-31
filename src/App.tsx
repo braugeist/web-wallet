@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
 import { getAddress, isAddress } from 'viem'
 
-import { formatAmount } from './lib/utils/amounts'
+import { formatAmount, normalizeAmountInput } from './lib/utils/amounts'
 import { truncateAddress, getTransactionExplorerUrl } from './lib/utils/format'
 import { useWalletState } from './state/useWalletState'
 import type { TransferQuote, TransferResult, WalletAsset } from './lib/chains/types'
@@ -253,7 +253,7 @@ function App() {
   }, [quote, resetTransfer, result])
 
   const handleAmountChange = useCallback((nextAmount: string) => {
-    setAmount(nextAmount)
+    setAmount(normalizeAmountInput(nextAmount))
     if (quote || result) {
       resetTransfer()
     }
