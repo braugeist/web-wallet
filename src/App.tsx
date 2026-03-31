@@ -7,7 +7,7 @@ import { truncateAddress, getTransactionExplorerUrl } from './lib/utils/format'
 import { useWalletState } from './state/useWalletState'
 import type { TransferQuote, TransferResult, WalletAsset } from './lib/chains/types'
 
-type Tab = 'assets' | 'receive' | 'send'
+type AppScreen = 'assets' | 'receive' | 'send'
 type SendStep = 'asset' | 'recipient' | 'amount' | 'preview' | 'confirm'
 
 type BarcodeDetectorLike = {
@@ -85,19 +85,19 @@ function App() {
     statusMessage,
   } = useWalletState()
 
-  const [tab, setTab] = useState<Tab>('assets')
+  const [activeScreen, setActiveScreen] = useState<AppScreen>('assets')
   const [selectedAssetKey, setSelectedAssetKey] = useState(() => getAssetKey(assets[0]))
   const [sendStep, setSendStep] = useState<SendStep>('asset')
   const [recipient, setRecipient] = useState('')
   const [amount, setAmount] = useState('')
   const [fileInputKey, setFileInputKey] = useState(0)
-  const [settingsOpen, setSettingsOpen] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
   const [networkPickerOpen, setNetworkPickerOpen] = useState(false)
   const [addressCopied, setAddressCopied] = useState(false)
   const [qrScannerOpen, setQrScannerOpen] = useState(false)
   const [qrScannerError, setQrScannerError] = useState<string | null>(null)
   const [qrScannerReady, setQrScannerReady] = useState(false)
-  const settingsRef = useRef<HTMLDivElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
   const networkPickerRef = useRef<HTMLDivElement>(null)
   const qrVideoRef = useRef<HTMLVideoElement>(null)
   const qrStreamRef = useRef<MediaStream | null>(null)
@@ -119,11 +119,11 @@ function App() {
   }, [resetTransfer, selectedChainId])
 
   useEffect(() => {
-    const open = settingsOpen || networkPickerOpen
+    const open = menuOpen || networkPickerOpen
     if (!open) return
     function handleClick(event: MouseEvent) {
-      if (settingsOpen && settingsRef.current && !settingsRef.current.contains(event.target as Node)) {
-        setSettingsOpen(false)
+      if (menuOpen && menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setMenuOpen(false)
       }
       if (networkPickerOpen && networkPickerRef.current && !networkPickerRef.current.contains(event.target as Node)) {
         setNetworkPickerOpen(false)
@@ -131,7 +131,7 @@ function App() {
     }
     document.addEventListener('mousedown', handleClick)
     return () => document.removeEventListener('mousedown', handleClick)
-  }, [settingsOpen, networkPickerOpen])
+  }, [menuOpen, networkPickerOpen])
 
   useEffect(() => {
     if (!addressCopied) return
@@ -315,6 +315,7 @@ function App() {
   const normalizedRecipient = recipientIsValid ? getAddress(recipientValue) : null
   const sendStepNumber = getSendStepNumber(sendStep)
   const resultUrl = result ? getTransactionExplorerUrl(network, result.transactionHash) : undefined
+  const showFloatingSendButton = activeScreen !== 'send' && !menuOpen
 
   async function handleCopyAddress() {
     if (!address) return
@@ -325,6 +326,31 @@ function App() {
     } catch {
       setAddressCopied(false)
     }
+  }
+
+  function handleNavigate(nextScreen: AppScreen) {
+    setActiveScreen(nextScreen)
+    setMenuOpen(false)
+  }
+
+  function handleToggleMenu() {
+    setMenuOpen((prev) => {
+      const next = !prev
+      if (next) {
+        setNetworkPickerOpen(false)
+      }
+      return next
+    })
+  }
+
+  function handleToggleNetworkPicker() {
+    setNetworkPickerOpen((prev) => {
+      const next = !prev
+      if (next) {
+        setMenuOpen(false)
+      }
+      return next
+    })
   }
 
   function handleSelectedAssetChange(nextAssetKey: string, nextStep?: SendStep) {
@@ -403,15 +429,15 @@ function App() {
           <div className="topbar-meta">
             <button
               className="topbar-network"
-              onClick={() => setNetworkPickerOpen((prev) => !prev)}
+              onClick={handleToggleNetworkPicker}
             >
               {network.label}
             </button>
             {address ? (
               <button
                 className="topbar-address"
-                onClick={() => setTab('receive')}
-                title="Copy address"
+                onClick={() => handleNavigate('receive')}
+                title="Open receive screen"
               >
                 {truncateAddress(address)}
               </button>
@@ -420,8 +446,8 @@ function App() {
         </div>
         <button
           className="button-secondary button-sm settings-trigger"
-          onClick={() => setSettingsOpen((prev) => !prev)}
-          aria-label="Settings"
+          onClick={handleToggleMenu}
+          aria-label="Open menu"
         >
           &#9776;
         </button>
@@ -430,19 +456,7 @@ function App() {
       {statusMessage ? <div className="banner success">{statusMessage}</div> : null}
       {error ? <div className="banner error">{error}</div> : null}
 
-      <nav className="tab-bar">
-        <button className={tab === 'assets' ? 'tab active' : 'tab'} onClick={() => setTab('assets')}>
-          Assets
-        </button>
-        <button className={tab === 'receive' ? 'tab active' : 'tab'} onClick={() => setTab('receive')}>
-          Receive
-        </button>
-        <button className={tab === 'send' ? 'tab active' : 'tab'} onClick={() => setTab('send')}>
-          Send
-        </button>
-      </nav>
-
-      <section className="panel tab-content" style={{ position: 'relative' }}>
+      <section className={showFloatingSendButton ? 'panel screen-panel has-floating-send' : 'panel screen-panel'}>
         {networkPickerOpen ? (
           <div className="network-picker" ref={networkPickerRef}>
             <span className="network-picker-title">Select network</span>
@@ -460,26 +474,44 @@ function App() {
             </button>
           </div>
         ) : null}
-        {settingsOpen ? (
-          <div className="settings-menu" ref={settingsRef}>
-            <span className="settings-menu-title">Settings</span>
+        {menuOpen ? (
+          <div className="app-menu" ref={menuRef}>
+            <span className="app-menu-title">Menu</span>
+            <button
+              className={activeScreen === 'assets' ? 'app-menu-action active' : 'app-menu-action'}
+              onClick={() => handleNavigate('assets')}
+            >
+              Assets
+            </button>
+            <button
+              className={activeScreen === 'send' ? 'app-menu-action active' : 'app-menu-action'}
+              onClick={() => handleNavigate('send')}
+            >
+              Send
+            </button>
+            <button
+              className={activeScreen === 'receive' ? 'app-menu-action active' : 'app-menu-action'}
+              onClick={() => handleNavigate('receive')}
+            >
+              Receive
+            </button>
             {refreshCurrentWallet ? (
               <button
-                className="settings-action"
-                onClick={() => { void refreshCurrentWallet(); setSettingsOpen(false) }}
+                className="app-menu-action"
+                onClick={() => { void refreshCurrentWallet(); setMenuOpen(false) }}
               >
                 {isRefreshing ? 'Refreshing...' : 'Refresh balances'}
               </button>
             ) : null}
             <button
-              className="settings-action"
-              onClick={() => { void exportRecoveryFile(); setSettingsOpen(false) }}
+              className="app-menu-action"
+              onClick={() => { void exportRecoveryFile(); setMenuOpen(false) }}
             >
               Backup wallet
             </button>
           </div>
         ) : null}
-        {tab === 'assets' ? (
+        {activeScreen === 'assets' ? (
           <div className="asset-list">
             {balances.map((balance) => (
               <article
@@ -489,7 +521,7 @@ function App() {
                 tabIndex={0}
                 onClick={() => {
                   handleSelectedAssetChange(getAssetKey(balance.asset), 'recipient')
-                  setTab('send')
+                  setActiveScreen('send')
                 }}
               >
                 <div>
@@ -504,7 +536,7 @@ function App() {
           </div>
         ) : null}
 
-        {tab === 'receive' && address ? (
+        {activeScreen === 'receive' && address ? (
           <div className="receive-content">
             <div className="qr-card">
               <QRCodeSVG value={address} size={176} bgColor="#ffffff" fgColor="#000000" />
@@ -527,7 +559,7 @@ function App() {
           </div>
         ) : null}
 
-        {tab === 'send' ? (
+        {activeScreen === 'send' ? (
           <div className="card-stack">
             <div className="send-stepper" role="list" aria-label="Send steps">
               {SEND_STEP_LABELS.map((step, index) => {
@@ -740,6 +772,13 @@ function App() {
           </div>
         ) : null}
       </section>
+
+      {showFloatingSendButton ? (
+        <button className="floating-send-button" onClick={() => handleNavigate('send')}>
+          <SendIcon />
+          Send
+        </button>
+      ) : null}
     </main>
   )
 }
@@ -808,6 +847,21 @@ function ScanIcon() {
     <svg viewBox="0 0 24 24" aria-hidden="true">
       <path
         d="M7 4H5a1 1 0 0 0-1 1v2M17 4h2a1 1 0 0 1 1 1v2M20 17v2a1 1 0 0 1-1 1h-2M4 17v2a1 1 0 0 0 1 1h2M7 12h10"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
+function SendIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="M4 12 19 5l-3.5 14-4.5-5-7-.5Z"
         fill="none"
         stroke="currentColor"
         strokeWidth="1.8"

@@ -75,7 +75,7 @@ strong {
 #root {
   display: flex;
   justify-content: center;
-  padding: 32px 20px 64px;
+  padding: 20px 20px 120px;
 }
 
 /* Shell */
@@ -162,7 +162,7 @@ strong {
   padding: 0 10px;
 }
 
-.settings-menu {
+.app-menu {
   position: absolute;
   inset: 0;
   z-index: 10;
@@ -173,14 +173,14 @@ strong {
   background: var(--background);
 }
 
-.settings-menu-title {
+.app-menu-title {
   font-size: 0.85rem;
   font-weight: 600;
   color: var(--muted);
   margin-bottom: 2px;
 }
 
-.settings-action {
+.app-menu-action {
   all: unset;
   cursor: pointer;
   display: flex;
@@ -195,7 +195,12 @@ strong {
   transition: border-color 0.15s, background 0.15s;
 }
 
-.settings-action:hover {
+.app-menu-action:hover {
+  border-color: var(--border-strong);
+  background: var(--surface-soft);
+}
+
+.app-menu-action.active {
   border-color: var(--border-strong);
   background: var(--surface-soft);
 }
@@ -243,43 +248,20 @@ strong {
   background: var(--surface-soft);
 }
 
-/* Tabs */
-.tab-bar {
-  display: flex;
-  gap: 0;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  overflow: hidden;
-  background: var(--surface);
-}
-
-.tab {
-  flex: 1;
-  min-height: 42px;
-  border: none;
-  border-radius: 0;
-  background: transparent;
-  color: var(--muted);
-  font-size: 0.9rem;
-  font-weight: 500;
-  transition: color 0.15s, background 0.15s;
-}
-
-.tab.active {
-  color: var(--foreground);
-  background: var(--background);
-}
-
-.tab:not(.active):hover {
-  color: var(--foreground);
-}
-
-/* Panel / Tab content */
+/* Panel */
 .panel {
   padding: 20px;
   border: 1px solid var(--border);
   border-radius: 16px;
   background: var(--background);
+}
+
+.screen-panel {
+  position: relative;
+}
+
+.screen-panel.has-floating-send {
+  padding-bottom: 92px;
 }
 
 .send-stepper {
@@ -403,6 +385,26 @@ button {
 button:disabled {
   cursor: not-allowed;
   opacity: 0.4;
+}
+
+.floating-send-button {
+  position: fixed;
+  right: max(20px, calc((100vw - min(480px, 100vw)) / 2 + 20px));
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 20px);
+  z-index: 20;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 52px;
+  padding: 0 18px;
+  border-radius: 999px;
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.18);
+}
+
+.floating-send-button svg {
+  width: 16px;
+  height: 16px;
 }
 
 /* Fields */
@@ -692,7 +694,7 @@ button:disabled {
 
 @media (max-width: 520px) {
   #root {
-    padding-inline: 12px;
+    padding: 12px 12px 112px;
   }
 
   .topbar {
@@ -705,6 +707,11 @@ button:disabled {
 
   .settings-trigger {
     align-self: center;
+  }
+
+  .floating-send-button {
+    right: 12px;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
   }
 
   .button-row {
