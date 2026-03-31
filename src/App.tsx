@@ -45,6 +45,7 @@ function App() {
   const [fileInputKey, setFileInputKey] = useState(0)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [networkPickerOpen, setNetworkPickerOpen] = useState(false)
+  const [addressCopied, setAddressCopied] = useState(false)
   const settingsRef = useRef<HTMLDivElement>(null)
   const networkPickerRef = useRef<HTMLDivElement>(null)
 
@@ -63,8 +64,25 @@ function App() {
     return () => document.removeEventListener('mousedown', handleClick)
   }, [settingsOpen, networkPickerOpen])
 
+  useEffect(() => {
+    if (!addressCopied) return
+    const timeoutId = window.setTimeout(() => setAddressCopied(false), 1500)
+    return () => window.clearTimeout(timeoutId)
+  }, [addressCopied])
+
   const selectedAsset = assets.find((a) => getAssetKey(a) === selectedAssetKey) ?? assets[0]
   const resultUrl = result ? getTransactionExplorerUrl(network, result.transactionHash) : undefined
+
+  async function handleCopyAddress() {
+    if (!address) return
+
+    try {
+      await navigator.clipboard.writeText(address)
+      setAddressCopied(true)
+    } catch {
+      setAddressCopied(false)
+    }
+  }
 
   if (!session) {
     return (
@@ -216,7 +234,18 @@ function App() {
             </div>
             <div className="card-stack">
               <p className="muted">{network.label}</p>
-              <code className="block-code">{address}</code>
+              <div className={addressCopied ? 'block-code address-copy-field copied' : 'block-code address-copy-field'}>
+                <code>{address}</code>
+                <button
+                  type="button"
+                  className="copy-address-button"
+                  onClick={() => void handleCopyAddress()}
+                  aria-label={addressCopied ? 'Address copied' : 'Copy wallet address'}
+                  title={addressCopied ? 'Address copied' : 'Copy address'}
+                >
+                  {addressCopied ? <CheckIcon /> : <CopyIcon />}
+                </button>
+              </div>
             </div>
           </div>
         ) : null}
@@ -306,6 +335,37 @@ function renderResult(result: { success: boolean; userOperationHash: string } | 
         </a>
       ) : null}
     </div>
+  )
+}
+
+function CopyIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <rect x="9" y="9" width="10" height="10" rx="2" fill="none" stroke="currentColor" strokeWidth="1.8" />
+      <path
+        d="M7 15H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v1"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
+function CheckIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="M5 12.5 9.5 17 19 7.5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   )
 }
 

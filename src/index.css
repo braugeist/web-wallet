@@ -433,6 +433,56 @@ button:disabled {
   border-radius: 12px;
   background: var(--surface);
   font-size: 0.85rem;
+  font-family: 'SFMono-Regular', ui-monospace, monospace;
+}
+
+.address-copy-field {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.address-copy-field code {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.address-copy-field.copied {
+  border-color: var(--border-strong);
+}
+
+.copy-address-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  min-height: 32px;
+  width: 32px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-soft);
+  color: var(--muted);
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+
+.copy-address-button:hover {
+  color: var(--foreground);
+  border-color: var(--border-strong);
+}
+
+.address-copy-field.copied .copy-address-button {
+  color: var(--foreground);
+  border-color: var(--border-strong);
+  background: var(--background);
+}
+
+.copy-address-button svg {
+  width: 16px;
+  height: 16px;
 }
 
 /* Callouts */
