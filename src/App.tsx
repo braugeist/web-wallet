@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
+import { getAddress, isAddress } from 'viem'
 
 import { formatAmount } from './lib/utils/amounts'
 import { truncateAddress, getTransactionExplorerUrl } from './lib/utils/format'
@@ -8,8 +9,41 @@ import type { WalletAsset, TransferQuote } from './lib/chains/types'
 
 type Tab = 'assets' | 'receive' | 'send'
 
+type BarcodeDetectorLike = {
+  detect(source: CanvasImageSource): Promise<Array<{ rawValue?: string }>>
+}
+
+type BarcodeDetectorConstructorLike = {
+  new (options?: { formats?: string[] }): BarcodeDetectorLike
+  getSupportedFormats?: () => Promise<string[]>
+}
+
+const ADDRESS_QR_PATTERN = /0x[a-fA-F0-9]{40}/
+
 function getAssetKey(asset: WalletAsset) {
   return asset.type === 'native' ? `native:${asset.chainId}` : `erc20:${asset.address}`
+}
+
+function parseRecipientFromQr(rawValue: string) {
+  const value = rawValue.trim()
+
+  if (!value) return null
+
+  if (isAddress(value)) {
+    return getAddress(value)
+  }
+
+  if (value.toLowerCase().startsWith('ethereum:')) {
+    const ethereumValue = value.slice('ethereum:'.length).replace(/^\/\//, '').replace(/^pay-/i, '')
+    const candidate = ethereumValue.split(/[/?@]/, 1)[0]
+
+    if (isAddress(candidate)) {
+      return getAddress(candidate)
+    }
+  }
+
+  const matchedAddress = value.match(ADDRESS_QR_PATTERN)?.[0]
+  return matchedAddress && isAddress(matchedAddress) ? getAddress(matchedAddress) : null
 }
 
 function App() {
@@ -46,8 +80,15 @@ function App() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [networkPickerOpen, setNetworkPickerOpen] = useState(false)
   const [addressCopied, setAddressCopied] = useState(false)
+  const [qrScannerOpen, setQrScannerOpen] = useState(false)
+  const [qrScannerError, setQrScannerError] = useState<string | null>(null)
+  const [qrScannerReady, setQrScannerReady] = useState(false)
   const settingsRef = useRef<HTMLDivElement>(null)
   const networkPickerRef = useRef<HTMLDivElement>(null)
+  const qrVideoRef = useRef<HTMLVideoElement>(null)
+  const qrStreamRef = useRef<MediaStream | null>(null)
+  const qrAnimationFrameRef = useRef<number | null>(null)
+  const qrDetectorRef = useRef<BarcodeDetectorLike | null>(null)
 
   useEffect(() => {
     const open = settingsOpen || networkPickerOpen
@@ -69,6 +110,160 @@ function App() {
     const timeoutId = window.setTimeout(() => setAddressCopied(false), 1500)
     return () => window.clearTimeout(timeoutId)
   }, [addressCopied])
+
+  const stopQrScanner = useCallback(() => {
+    if (qrAnimationFrameRef.current !== null) {
+      window.cancelAnimationFrame(qrAnimationFrameRef.current)
+      qrAnimationFrameRef.current = null
+    }
+
+    qrDetectorRef.current = null
+    setQrScannerReady(false)
+
+    const videoElement = qrVideoRef.current
+    if (videoElement) {
+      videoElement.pause()
+      videoElement.srcObject = null
+    }
+
+    if (qrStreamRef.current) {
+      qrStreamRef.current.getTracks().forEach((track) => track.stop())
+      qrStreamRef.current = null
+    }
+  }, [])
+
+  useEffect(() => stopQrScanner, [stopQrScanner])
+
+  useEffect(() => {
+    if (!qrScannerOpen) {
+      setQrScannerError(null)
+      stopQrScanner()
+      return
+    }
+
+    let cancelled = false
+    let scanPending = false
+
+    const scanFrame = async () => {
+      if (cancelled) return
+
+      const detector = qrDetectorRef.current
+      const videoElement = qrVideoRef.current
+
+      if (!detector || !videoElement || videoElement.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
+        qrAnimationFrameRef.current = window.requestAnimationFrame(() => {
+          void scanFrame()
+        })
+        return
+      }
+
+      if (scanPending) {
+        qrAnimationFrameRef.current = window.requestAnimationFrame(() => {
+          void scanFrame()
+        })
+        return
+      }
+
+      scanPending = true
+
+      try {
+        const detectedBarcodes = await detector.detect(videoElement)
+        const rawValue = detectedBarcodes.find((barcode) => barcode.rawValue)?.rawValue
+
+        if (rawValue) {
+          const scannedRecipient = parseRecipientFromQr(rawValue)
+
+          if (scannedRecipient) {
+            setRecipient(scannedRecipient)
+            setQrScannerError(null)
+            setQrScannerOpen(false)
+            return
+          }
+
+          setQrScannerError('QR code does not contain a valid EVM address.')
+        }
+      } catch {
+        setQrScannerError('Could not scan QR code. Try again.')
+      } finally {
+        scanPending = false
+      }
+
+      qrAnimationFrameRef.current = window.requestAnimationFrame(() => {
+        void scanFrame()
+      })
+    }
+
+    async function startQrScanner() {
+      const BarcodeDetectorApi = (window as Window & { BarcodeDetector?: BarcodeDetectorConstructorLike }).BarcodeDetector
+
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setQrScannerError('Camera access is not available in this browser.')
+        return
+      }
+
+      if (!BarcodeDetectorApi) {
+        setQrScannerError('QR scanning is not supported in this browser.')
+        return
+      }
+
+      try {
+        const supportedFormats = BarcodeDetectorApi.getSupportedFormats
+          ? await BarcodeDetectorApi.getSupportedFormats()
+          : []
+
+        qrDetectorRef.current = new BarcodeDetectorApi(
+          supportedFormats.length > 0 && supportedFormats.includes('qr_code')
+            ? { formats: ['qr_code'] }
+            : undefined,
+        )
+
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: { ideal: 'environment' },
+          },
+          audio: false,
+        })
+
+        if (cancelled) {
+          stream.getTracks().forEach((track) => track.stop())
+          return
+        }
+
+        qrStreamRef.current = stream
+
+        const videoElement = qrVideoRef.current
+        if (!videoElement) {
+          setQrScannerError('Could not start the camera preview.')
+          return
+        }
+
+        videoElement.srcObject = stream
+        await videoElement.play()
+
+        if (cancelled) return
+
+        setQrScannerReady(true)
+        setQrScannerError(null)
+        void scanFrame()
+      } catch (error) {
+        if (cancelled) return
+
+        const message = error instanceof Error ? error.message : 'Could not open the camera.'
+        if (message.toLowerCase().includes('permission')) {
+          setQrScannerError('Camera permission was denied.')
+        } else {
+          setQrScannerError(message)
+        }
+      }
+    }
+
+    void startQrScanner()
+
+    return () => {
+      cancelled = true
+      stopQrScanner()
+    }
+  }, [qrScannerOpen, stopQrScanner])
 
   const selectedAsset = assets.find((a) => getAssetKey(a) === selectedAssetKey) ?? assets[0]
   const resultUrl = result ? getTransactionExplorerUrl(network, result.transactionHash) : undefined
@@ -268,11 +463,21 @@ function App() {
 
             <label className="field">
               <span>Recipient</span>
-              <input
-                value={recipient}
-                onChange={(event) => setRecipient(event.target.value)}
-                placeholder="0x..."
-              />
+              <div className="field-input-action">
+                <input
+                  value={recipient}
+                  onChange={(event) => setRecipient(event.target.value)}
+                  placeholder="0x..."
+                />
+                <button
+                  type="button"
+                  className="button-secondary scan-button"
+                  onClick={() => setQrScannerOpen(true)}
+                >
+                  <ScanIcon />
+                  Scan QR
+                </button>
+              </div>
             </label>
 
             <label className="field">
@@ -303,6 +508,34 @@ function App() {
 
             {renderQuote(quote)}
             {renderResult(result, resultUrl)}
+
+            {qrScannerOpen ? (
+              <div className="qr-scanner-overlay" role="dialog" aria-modal="true" aria-label="Scan recipient QR code">
+                <div className="qr-scanner-card">
+                  <div className="qr-scanner-header">
+                    <div>
+                      <p className="qr-scanner-title">Scan recipient QR</p>
+                      <p className="muted">Point your camera at a wallet address QR code.</p>
+                    </div>
+                    <button
+                      type="button"
+                      className="button-secondary qr-scanner-close"
+                      onClick={() => setQrScannerOpen(false)}
+                      aria-label="Close scanner"
+                    >
+                      <CloseIcon />
+                    </button>
+                  </div>
+
+                  <div className={qrScannerReady ? 'qr-scanner-preview ready' : 'qr-scanner-preview'}>
+                    <video ref={qrVideoRef} autoPlay muted playsInline />
+                    {!qrScannerReady ? <span className="qr-scanner-status">Opening camera...</span> : null}
+                  </div>
+
+                  {qrScannerError ? <div className="banner warning">{qrScannerError}</div> : null}
+                </div>
+              </div>
+            ) : null}
           </div>
         ) : null}
       </section>
@@ -364,6 +597,35 @@ function CheckIcon() {
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
+function ScanIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="M7 4H5a1 1 0 0 0-1 1v2M17 4h2a1 1 0 0 1 1 1v2M20 17v2a1 1 0 0 1-1 1h-2M4 17v2a1 1 0 0 0 1 1h2M7 12h10"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
+function CloseIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="M6 6l12 12M18 6 6 18"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
       />
     </svg>
   )

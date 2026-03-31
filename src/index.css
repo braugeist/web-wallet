@@ -335,6 +335,12 @@ button:disabled {
   gap: 6px;
 }
 
+.field-input-action {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+}
+
 .field span {
   color: var(--muted);
   font-size: 0.85rem;
@@ -343,6 +349,20 @@ button:disabled {
 .card-stack {
   display: grid;
   gap: 14px;
+}
+
+.scan-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.scan-button svg,
+.qr-scanner-close svg {
+  width: 16px;
+  height: 16px;
 }
 
 /* Banners */
@@ -485,6 +505,92 @@ button:disabled {
   height: 16px;
 }
 
+.qr-scanner-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.48);
+}
+
+.qr-scanner-card {
+  width: min(420px, 100%);
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border-radius: 18px;
+  background: var(--background);
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.2);
+}
+
+.qr-scanner-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.qr-scanner-title {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.qr-scanner-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  width: 36px;
+  padding: 0;
+}
+
+.qr-scanner-preview {
+  position: relative;
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.03)),
+    #101010;
+}
+
+.qr-scanner-preview video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.qr-scanner-preview::after {
+  content: '';
+  position: absolute;
+  inset: 18%;
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  border-radius: 18px;
+  box-shadow: 0 0 0 999px rgba(0, 0, 0, 0.14);
+  pointer-events: none;
+}
+
+.qr-scanner-preview:not(.ready) video {
+  opacity: 0;
+}
+
+.qr-scanner-status {
+  position: absolute;
+  inset: auto 16px 16px;
+  padding: 10px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  font-size: 0.85rem;
+  backdrop-filter: blur(8px);
+}
+
 /* Callouts */
 .callout {
   display: grid;
@@ -522,5 +628,9 @@ button:disabled {
 
   .button-row {
     flex-direction: column;
+  }
+
+  .field-input-action {
+    grid-template-columns: 1fr;
   }
 }
