@@ -326,6 +326,13 @@ strong {
   text-align: center;
 }
 
+.screen-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
 .screen-eyebrow {
   font-size: 0.72rem;
   font-weight: 700;
@@ -458,6 +465,36 @@ button {
   min-height: 40px;
   padding: 0 12px;
   font-size: 0.85rem;
+}
+
+.title-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  min-height: 30px;
+  padding: 0;
+  flex: 0 0 auto;
+  align-self: flex-start;
+  border: 1px solid var(--border);
+  border-color: var(--border);
+  color: var(--muted);
+  background: transparent;
+}
+
+.title-icon-button:hover {
+  color: var(--foreground);
+  background: var(--surface);
+}
+
+.title-icon-button svg {
+  width: 15px;
+  height: 15px;
+}
+
+.title-icon-button.spinning svg {
+  animation: title-icon-spin 0.9s linear infinite;
 }
 
 button:disabled {
@@ -786,6 +823,12 @@ button:disabled {
   color: var(--muted);
 }
 
+@keyframes title-icon-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 @media (max-width: 520px) {
   #root {
     padding: 12px 12px 112px;
@@ -821,6 +864,10 @@ button:disabled {
 
   .send-step-header {
     flex-direction: column;
+  }
+
+  .screen-header {
+    align-items: flex-start;
   }
 
   .app-menu,

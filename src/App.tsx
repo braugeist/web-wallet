@@ -525,22 +525,28 @@ function App() {
             >
               Backup wallet
             </button>
-            {refreshCurrentWallet ? (
-              <button
-                className="app-menu-action"
-                onClick={() => { void refreshCurrentWallet(); setMenuOpen(false) }}
-              >
-                {isRefreshing ? 'Refreshing...' : 'Refresh balances'}
-              </button>
-            ) : null}
           </div>
         ) : null}
         {activeScreen === 'assets' ? (
           <div className="screen-content">
-            <div className="screen-copy">
-              <p className="screen-eyebrow">Portfolio</p>
-              <h1 className="screen-title">Assets</h1>
-              <p className="screen-subtitle">Tap any balance to start a transfer.</p>
+            <div className="screen-header">
+              <div className="screen-copy">
+                <p className="screen-eyebrow">Portfolio</p>
+                <h1 className="screen-title">Assets</h1>
+                <p className="screen-subtitle">Tap any balance to start a transfer.</p>
+              </div>
+              {refreshCurrentWallet ? (
+                <button
+                  type="button"
+                  className={isRefreshing ? 'title-icon-button spinning' : 'title-icon-button'}
+                  onClick={() => void refreshCurrentWallet()}
+                  disabled={isRefreshing}
+                  aria-label="Refresh balances"
+                  title="Refresh balances"
+                >
+                  <RefreshIcon />
+                </button>
+              ) : null}
             </div>
 
             <div className="asset-list">
@@ -955,6 +961,45 @@ function CloseIcon() {
         stroke="currentColor"
         strokeWidth="1.8"
         strokeLinecap="round"
+      />
+    </svg>
+  )
+}
+
+function RefreshIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="M21 2v6h-6"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M3 12a9 9 0 0 1 15.55-6.36L21 8"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M3 22v-6h6"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M21 12a9 9 0 0 1-15.55 6.36L3 16"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
       />
     </svg>
   )
