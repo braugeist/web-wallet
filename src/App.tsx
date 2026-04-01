@@ -6,10 +6,10 @@ import { getAddress, isAddress } from 'viem'
 import { formatAmount, normalizeAmountInput } from './lib/utils/amounts'
 import { truncateAddress, getTransactionExplorerUrl } from './lib/utils/format'
 import { useWalletState } from './state/useWalletState'
-import type { TransferQuote, TransferResult, WalletAsset } from './lib/chains/types'
+import type { TransferQuote, WalletAsset } from './lib/chains/types'
 
 type AppScreen = 'assets' | 'receive' | 'send' | 'backup'
-type SendStep = 'asset' | 'recipient' | 'amount' | 'preview' | 'confirm'
+type SendStep = 'asset' | 'recipient' | 'amount' | 'review' | 'summary'
 
 type BarcodeDetectorResultLike = {
   rawValue?: string
@@ -35,8 +35,8 @@ const SEND_STEP_LABELS: Array<{ id: SendStep; label: string }> = [
   { id: 'asset', label: 'Asset' },
   { id: 'recipient', label: 'Recipient' },
   { id: 'amount', label: 'Amount' },
-  { id: 'preview', label: 'Preview' },
-  { id: 'confirm', label: 'Confirm' },
+  { id: 'review', label: 'Review' },
+  { id: 'summary', label: 'Summary' },
 ]
 
 function createJsQrDetector(): QrCodeDetectorLike {
@@ -477,7 +477,7 @@ function App() {
     const nextQuote = await prepareTransfer(selectedAsset, recipientValue, amountValue)
 
     if (nextQuote) {
-      setSendStep('preview')
+      setSendStep('review')
     }
   }
 
@@ -485,7 +485,7 @@ function App() {
     const nextResult = await sendTransfer()
 
     if (nextResult) {
-      setSendStep('confirm')
+      setSendStep('summary')
     }
   }
 
@@ -697,7 +697,7 @@ function App() {
             <div className="screen-copy">
               <p className="screen-eyebrow">Transfer</p>
               <h1 className="screen-title">Send</h1>
-              <p className="screen-subtitle">Move through the steps below to review and confirm the transfer.</p>
+              <p className="screen-subtitle">Move through the steps below to review, confirm, and finish the transfer.</p>
             </div>
 
             <div className="send-stepper" role="list" aria-label="Send steps">
@@ -831,55 +831,65 @@ function App() {
                       onClick={() => void handlePreviewTransfer()}
                       disabled={!amountValue || isPreparing || isSending}
                     >
-                      {isPreparing ? 'Preparing...' : 'Preview transfer'}
+                      {isPreparing ? 'Preparing...' : 'Review transfer'}
                     </button>
                   </div>
                 </div>
               ) : null}
 
-              {sendStep === 'preview' ? (
+              {sendStep === 'review' ? (
                 <div className="card-stack">
-                  <p className="muted">Review the transfer details before moving to the final confirmation step.</p>
+                  <p className="muted">Review the transfer details and confirm when you're ready to send.</p>
                   {renderQuote(quote)}
+                  <p className="muted">Confirming will prompt the passkey signature and submit the transfer.</p>
                   <div className="button-row">
                     <button className="button-secondary" onClick={() => setSendStep('amount')}>
                       Back
                     </button>
-                    <button disabled={!quote} onClick={() => setSendStep('confirm')}>
-                      Continue to confirm
+                    <button
+                      onClick={() => void handleConfirmTransfer()}
+                      disabled={!quote || isPreparing || isSending}
+                    >
+                      {isSending ? 'Sending...' : 'Confirm transfer'}
                     </button>
                   </div>
                 </div>
               ) : null}
 
-              {sendStep === 'confirm' ? (
+              {sendStep === 'summary' ? (
                 <div className="card-stack">
-                  <p className="muted">Confirming will prompt the passkey signature and submit the transfer.</p>
-                  {quote ? renderQuote(quote) : null}
+                  <p className="muted">
+                    {result?.success
+                      ? 'The transfer has been submitted. Review the final details below.'
+                      : 'The transfer attempt finished without completing. Review the details below.'}
+                  </p>
+                  {quote ? (
+                    <div className={result?.success ? 'callout success' : 'callout'}>
+                      <p>
+                        {result?.success ? 'Sent' : 'Attempted'} {formatAmount(quote.value, quote.asset.decimals)} {quote.asset.symbol} to{' '}
+                        {truncateAddress(quote.recipient)}
+                      </p>
+                      <p className="muted">Max fee: {formatAmount(quote.estimatedFee, 18)} ETH</p>
+                    </div>
+                  ) : null}
                   {result ? (
-                    <div className="button-row">
-                      <button className="button-secondary" onClick={handleStartNewTransfer}>
-                        Start another transfer
-                      </button>
+                    <div className={result.success ? 'callout success' : 'callout'}>
+                      <p>{result.success ? 'Transfer complete' : 'Transfer reverted'}</p>
+                      {resultUrl ? (
+                        <a href={resultUrl} target="_blank" rel="noreferrer">
+                          View on explorer
+                        </a>
+                      ) : null}
                     </div>
-                  ) : (
-                    <div className="button-row">
-                      <button className="button-secondary" onClick={() => setSendStep('preview')}>
-                        Back
-                      </button>
-                      <button
-                        onClick={() => void handleConfirmTransfer()}
-                        disabled={!quote || isPreparing || isSending}
-                      >
-                        {isSending ? 'Sending...' : 'Confirm transfer'}
-                      </button>
-                    </div>
-                  )}
+                  ) : null}
+                  <div className="button-row">
+                    <button className="button-secondary" onClick={handleStartNewTransfer}>
+                      Start another transfer
+                    </button>
+                  </div>
                 </div>
               ) : null}
             </div>
-
-            {renderResult(result, resultUrl)}
 
             {qrScannerOpen ? (
               <div className="qr-scanner-overlay" role="dialog" aria-modal="true" aria-label="Scan recipient QR code">
@@ -975,21 +985,6 @@ function renderQuote(quote: TransferQuote | null) {
         {formatAmount(quote.value, quote.asset.decimals)} {quote.asset.symbol} to {truncateAddress(quote.recipient)}
       </p>
       <p className="muted">Max fee: {formatAmount(quote.estimatedFee, 18)} ETH</p>
-    </div>
-  )
-}
-
-function renderResult(result: TransferResult | null, resultUrl?: string) {
-  if (!result) return null
-
-  return (
-    <div className="callout success">
-      <p>{result.success ? 'Confirmed' : 'Reverted'}</p>
-      {resultUrl ? (
-        <a href={resultUrl} target="_blank" rel="noreferrer">
-          View on explorer
-        </a>
-      ) : null}
     </div>
   )
 }
