@@ -5,6 +5,7 @@ import type { WalletSession } from '../storage/walletSession'
 
 export type ChainKind = 'evm'
 export type AssetType = 'native' | 'erc20'
+export type GasPaymentMode = 'native' | 'erc20'
 
 export type WalletAsset = {
   address?: Address
@@ -29,7 +30,12 @@ export type PreparedCall = {
 export type TransferQuote = {
   asset: WalletAsset
   calls: PreparedCall[]
-  estimatedFee: bigint
+  estimatedGasFee: bigint
+  estimatedNativeFee: bigint
+  estimatedUsdFee?: bigint
+  gasAsset: WalletAsset
+  gasPaymentMode: GasPaymentMode
+  includesGasTokenApproval: boolean
   maxFeePerGas: bigint
   maxPriorityFeePerGas: bigint
   preVerificationGas: bigint
@@ -57,6 +63,7 @@ export type AdapterBalanceParameters = AdapterAddressParameters & {
 export type AdapterTransferParameters = AdapterAddressParameters & {
   asset: WalletAsset
   amount: string
+  gasAsset: WalletAsset
   recipient: string
 }
 

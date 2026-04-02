@@ -183,7 +183,7 @@ export function useWalletState() {
   }, [])
 
   const prepareTransfer = useCallback(
-    async (asset: WalletAsset, recipient: string, amount: string) => {
+    async (asset: WalletAsset, recipient: string, amount: string, gasAsset: WalletAsset) => {
       if (!session) {
         setError('Create or restore a wallet first.')
         return null
@@ -199,6 +199,7 @@ export function useWalletState() {
         const nextQuote = await evmChainAdapter.prepareTransfer({
           amount,
           asset,
+          gasAsset,
           network,
           recipient,
           session,

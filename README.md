@@ -17,6 +17,7 @@ Current development env variables:
 
 - `VITE_MOCK_PASSKEY=true` enables the mock passkey flow.
 - `VITE_MOCK_PRIVATE_KEY=` is optional. Leave it blank to generate a random mock private key at startup.
+- `VITE_SEPOLIA_BUNDLER_URL=` is optional. Point it at a Pimlico-compatible Sepolia RPC if you want to pay gas in ERC-20 tokens like USDC.
 
 When `VITE_MOCK_PRIVATE_KEY` is not set, the app prints a generated value to the browser console in a copy-pasteable format so it can be added back to `.env.development` and reused across restarts.
 

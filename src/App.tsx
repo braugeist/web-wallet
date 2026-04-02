@@ -3,7 +3,9 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
 import { getAddress, isAddress } from 'viem'
 
+import type { SupportedNetworkConfig } from './config/networks'
 import { formatAmount, normalizeAmountInput } from './lib/utils/amounts'
+import { isSupportedErc20GasAsset } from './lib/chains/evm/paymaster'
 import { truncateAddress, getTransactionExplorerUrl } from './lib/utils/format'
 import { useWalletState } from './state/useWalletState'
 import type { TransferQuote, WalletAsset } from './lib/chains/types'
@@ -104,6 +106,26 @@ function getSendStepNumber(step: SendStep) {
   return SEND_STEP_LABELS.findIndex((entry) => entry.id === step) + 1
 }
 
+function getDefaultGasAsset(assets: WalletAsset[]) {
+  return assets.find((asset) => asset.type === 'native') ?? assets[0]
+}
+
+function isAvailableGasAsset(network: SupportedNetworkConfig, asset: WalletAsset) {
+  return asset.type === 'native' || isSupportedErc20GasAsset(network, asset)
+}
+
+function getGasPaymentSummary(quote: TransferQuote) {
+  if (quote.gasPaymentMode === 'native') {
+    return `Max fee: ${formatAmount(quote.estimatedGasFee, 18)} ETH`
+  }
+
+  const usdSuffix = typeof quote.estimatedUsdFee === 'bigint'
+    ? ` (~$${formatAmount(quote.estimatedUsdFee, 6, 2)})`
+    : ''
+
+  return `Estimated gas: ${formatAmount(quote.estimatedGasFee, quote.gasAsset.decimals)} ${quote.gasAsset.symbol}${usdSuffix}`
+}
+
 function parseRecipientFromQr(rawValue: string) {
   const value = rawValue.trim()
 
@@ -180,6 +202,7 @@ function App() {
 
   const [activeScreen, setActiveScreen] = useState<AppScreen>('assets')
   const [selectedAssetKey, setSelectedAssetKey] = useState(() => getAssetKey(assets[0]))
+  const [selectedGasAssetKey, setSelectedGasAssetKey] = useState(() => getAssetKey(getDefaultGasAsset(assets)))
   const [sendStep, setSendStep] = useState<SendStep>('asset')
   const [recipient, setRecipient] = useState('')
   const [amount, setAmount] = useState('')
@@ -206,12 +229,19 @@ function App() {
   }, [assets, selectedAssetKey])
 
   useEffect(() => {
+    if (!assets.some((asset) => getAssetKey(asset) === selectedGasAssetKey)) {
+      setSelectedGasAssetKey(getAssetKey(getDefaultGasAsset(assets)))
+    }
+  }, [assets, selectedGasAssetKey])
+
+  useEffect(() => {
     setSendStep('asset')
     setRecipient('')
     setAmount('')
     resetTransfer()
     setQrScannerOpen(false)
-  }, [resetTransfer, selectedChainId])
+    setSelectedGasAssetKey(getAssetKey(getDefaultGasAsset(assets)))
+  }, [assets, resetTransfer, selectedChainId])
 
   useEffect(() => {
     const open = menuOpen || networkPickerOpen
@@ -254,6 +284,13 @@ function App() {
 
   const handleAmountChange = useCallback((nextAmount: string) => {
     setAmount(normalizeAmountInput(nextAmount))
+    if (quote || result) {
+      resetTransfer()
+    }
+  }, [quote, resetTransfer, result])
+
+  const handleGasAssetChange = useCallback((nextGasAssetKey: string) => {
+    setSelectedGasAssetKey(nextGasAssetKey)
     if (quote || result) {
       resetTransfer()
     }
@@ -418,7 +455,14 @@ function App() {
   }, [handleRecipientChange, qrScannerOpen, stopQrScanner])
 
   const selectedAsset = assets.find((a) => getAssetKey(a) === selectedAssetKey) ?? assets[0]
+  const gasPaymentOptions = balances
+    .map((balance) => balance.asset)
+    .filter((asset) => isAvailableGasAsset(network, asset))
+  const selectedGasAsset = gasPaymentOptions.find((asset) => getAssetKey(asset) === selectedGasAssetKey)
+    ?? gasPaymentOptions[0]
+    ?? getDefaultGasAsset(assets)
   const selectedBalance = balances.find((balance) => getAssetKey(balance.asset) === getAssetKey(selectedAsset))
+  const selectedGasBalance = balances.find((balance) => getAssetKey(balance.asset) === getAssetKey(selectedGasAsset))
   const recipientValue = recipient.trim()
   const amountValue = amount.trim()
   const recipientIsValid = recipientValue.length > 0 && isAddress(recipientValue)
@@ -474,7 +518,7 @@ function App() {
   }
 
   async function handlePreviewTransfer() {
-    const nextQuote = await prepareTransfer(selectedAsset, recipientValue, amountValue)
+    const nextQuote = await prepareTransfer(selectedAsset, recipientValue, amountValue, selectedGasAsset)
 
     if (nextQuote) {
       setSendStep('review')
@@ -823,6 +867,41 @@ function App() {
                       placeholder={`0.0 ${selectedAsset.symbol}`}
                     />
                   </label>
+                  {gasPaymentOptions.length > 0 ? (
+                    <label className="field">
+                      <span>Pay gas with</span>
+                      <select
+                        value={getAssetKey(selectedGasAsset)}
+                        onChange={(event) => handleGasAssetChange(event.target.value)}
+                      >
+                        {gasPaymentOptions.map((asset) => {
+                          const balance = balances.find(
+                            (candidate) => getAssetKey(candidate.asset) === getAssetKey(asset),
+                          )
+
+                          return (
+                            <option key={getAssetKey(asset)} value={getAssetKey(asset)}>
+                              {asset.symbol}
+                              {asset.type === 'native' ? ` (${network.nativeSymbol})` : ' via paymaster'}
+                              {balance
+                                ? ` • ${formatAmount(balance.value, asset.decimals)} ${asset.symbol}`
+                                : ''}
+                            </option>
+                          )
+                        })}
+                      </select>
+                    </label>
+                  ) : null}
+                  <p className="muted">
+                    {selectedGasAsset.type === 'native'
+                      ? `Network fees will be paid in ${network.nativeSymbol}.`
+                      : `Network fees will be paid in ${selectedGasAsset.symbol} through the Sepolia paymaster.`}
+                  </p>
+                  {selectedGasAsset.type === 'erc20' && selectedGasBalance?.value === 0n ? (
+                    <div className="banner warning">
+                      Add some {selectedGasAsset.symbol} to this wallet before sending, or switch gas payment back to ETH.
+                    </div>
+                  ) : null}
                   <div className="button-row">
                     <button className="button-secondary" onClick={() => setSendStep('recipient')}>
                       Back
@@ -841,6 +920,12 @@ function App() {
                 <div className="card-stack">
                   <p className="muted">Review the transfer details and confirm when you're ready to send.</p>
                   {renderQuote(quote)}
+                  {quote?.includesGasTokenApproval ? (
+                    <div className="banner warning">
+                      This transaction will also approve the paymaster to spend {quote.gasAsset.symbol} for future gas
+                      payments.
+                    </div>
+                  ) : null}
                   <p className="muted">Confirming will prompt the passkey signature and submit the transfer.</p>
                   <div className="button-row">
                     <button className="button-secondary" onClick={() => setSendStep('amount')}>
@@ -869,7 +954,12 @@ function App() {
                         {result?.success ? 'Sent' : 'Attempted'} {formatAmount(quote.value, quote.asset.decimals)} {quote.asset.symbol} to{' '}
                         {truncateAddress(quote.recipient)}
                       </p>
-                      <p className="muted">Max fee: {formatAmount(quote.estimatedFee, 18)} ETH</p>
+                      <p className="muted">{getGasPaymentSummary(quote)}</p>
+                      {quote.gasPaymentMode === 'erc20' ? (
+                        <p className="muted">
+                          ETH equivalent: {formatAmount(quote.estimatedNativeFee, 18)} ETH
+                        </p>
+                      ) : null}
                     </div>
                   ) : null}
                   {result ? (
@@ -984,7 +1074,10 @@ function renderQuote(quote: TransferQuote | null) {
       <p>
         {formatAmount(quote.value, quote.asset.decimals)} {quote.asset.symbol} to {truncateAddress(quote.recipient)}
       </p>
-      <p className="muted">Max fee: {formatAmount(quote.estimatedFee, 18)} ETH</p>
+      <p className="muted">{getGasPaymentSummary(quote)}</p>
+      {quote.gasPaymentMode === 'erc20' ? (
+        <p className="muted">ETH equivalent: {formatAmount(quote.estimatedNativeFee, 18)} ETH</p>
+      ) : null}
     </div>
   )
 }
