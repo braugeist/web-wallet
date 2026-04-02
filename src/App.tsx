@@ -116,14 +116,14 @@ function isAvailableGasAsset(network: SupportedNetworkConfig, asset: WalletAsset
 
 function getGasPaymentSummary(quote: TransferQuote) {
   if (quote.gasPaymentMode === 'native') {
-    return `Max fee: ${formatAmount(quote.estimatedGasFee, 18)} ETH`
+    return `Maximum transaction fee: ${formatAmount(quote.estimatedGasFee, 18)} ETH`
   }
 
   const usdSuffix = typeof quote.estimatedUsdFee === 'bigint'
     ? ` (~$${formatAmount(quote.estimatedUsdFee, 6, 2)})`
     : ''
 
-  return `Estimated gas: ${formatAmount(quote.estimatedGasFee, quote.gasAsset.decimals)} ${quote.gasAsset.symbol}${usdSuffix}`
+  return `Estimated transaction fee: ${formatAmount(quote.estimatedGasFee, quote.gasAsset.decimals)} ${quote.gasAsset.symbol}${usdSuffix}`
 }
 
 function parseRecipientFromQr(rawValue: string) {
@@ -869,7 +869,7 @@ function App() {
                   </label>
                   {gasPaymentOptions.length > 0 ? (
                     <label className="field">
-                      <span>Pay gas with</span>
+                      <span>Pay transaction fees with</span>
                       <select
                         value={getAssetKey(selectedGasAsset)}
                         onChange={(event) => handleGasAssetChange(event.target.value)}
@@ -894,8 +894,8 @@ function App() {
                   ) : null}
                   <p className="muted">
                     {selectedGasAsset.type === 'native'
-                      ? `Network fees will be paid in ${network.nativeSymbol}.`
-                      : `Network fees will be paid in ${selectedGasAsset.symbol} through the Sepolia paymaster.`}
+                      ? `Transaction fees will be paid in ${network.nativeSymbol}.`
+                      : `Transaction fees will be paid in ${selectedGasAsset.symbol} through the Sepolia paymaster.`}
                   </p>
                   {selectedGasAsset.type === 'erc20' && selectedGasBalance?.value === 0n ? (
                     <div className="banner warning">
@@ -922,8 +922,8 @@ function App() {
                   {renderQuote(quote)}
                   {quote?.includesGasTokenApproval ? (
                     <div className="banner warning">
-                      This transaction will also approve the paymaster to spend {quote.gasAsset.symbol} for future gas
-                      payments.
+                      This transaction will also approve the paymaster to spend {quote.gasAsset.symbol} for future
+                      transaction fees.
                     </div>
                   ) : null}
                   <p className="muted">Confirming will prompt the passkey signature and submit the transfer.</p>
