@@ -895,7 +895,7 @@ function App() {
                   <p className="muted">
                     {selectedGasAsset.type === 'native'
                       ? `Transaction fees will be paid in ${network.nativeSymbol}.`
-                      : `Transaction fees will be paid in ${selectedGasAsset.symbol} through the Sepolia paymaster.`}
+                      : `Transaction fees will be paid in ${selectedGasAsset.symbol} through the paymaster on ${network.label}.`}
                   </p>
                   {selectedGasAsset.type === 'erc20' && selectedGasBalance?.value === 0n ? (
                     <div className="banner warning">

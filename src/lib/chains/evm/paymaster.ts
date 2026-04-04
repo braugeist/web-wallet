@@ -266,8 +266,8 @@ async function getPimlicoTokenQuote(
   } catch (error) {
     const message = error instanceof Error ? ` ${error.message}` : ''
     throw new Error(
-      'ERC-20 gas payments require a Pimlico-compatible Sepolia bundler/paymaster endpoint. '
-      + `Set VITE_SEPOLIA_BUNDLER_URL if your current RPC does not expose token quote methods.${message}`,
+      'ERC-20 gas payments require a Pimlico-compatible bundler/paymaster endpoint. '
+      + `Set VITE_MAINNET_BUNDLER_URL or VITE_SEPOLIA_BUNDLER_URL if your RPC does not expose pimlico_getTokenQuotes.${message}`,
     )
   }
 

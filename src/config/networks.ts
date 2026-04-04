@@ -22,6 +22,9 @@ export const supportedNetworks: SupportedNetworkConfig[] = [
     bundlerUrl: env.VITE_MAINNET_BUNDLER_URL ?? 'https://public.pimlico.io/v2/1/rpc',
     chain: mainnet,
     chainId: 1,
+    erc20GasPaymentTokens: [
+      getAddress('0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48'),
+    ],
     explorerUrl: 'https://etherscan.io',
     label: 'Ethereum Mainnet',
     nativeSymbol: 'ETH',
