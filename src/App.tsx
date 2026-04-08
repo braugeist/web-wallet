@@ -149,6 +149,34 @@ function parseRecipientFromQr(rawValue: string) {
   return matchedAddress && isAddress(matchedAddress) ? getAddress(matchedAddress) : null
 }
 
+function BackupRecoveryChecklist() {
+  return (
+    <div className="backup-checklist" aria-label="Backup guidance">
+      <div className="backup-checklist-item">
+        <span className="backup-checklist-step">1</span>
+        <div>
+          <p>Download the recovery file.</p>
+          <p className="muted">Public data only—no private keys. Your passkey stays in the enclave.</p>
+        </div>
+      </div>
+      <div className="backup-checklist-item">
+        <span className="backup-checklist-step">2</span>
+        <div>
+          <p>Keep it somewhere you will find it.</p>
+          <p className="muted">You still need your passkey to sign.</p>
+        </div>
+      </div>
+      <div className="backup-checklist-item">
+        <span className="backup-checklist-step">3</span>
+        <div>
+          <p>Optional: try restore.</p>
+          <p className="muted">Restore existing wallet, then the same passkey.</p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function Brand({ onClick }: { onClick?: () => void }) {
   const content = (
     <>
@@ -224,6 +252,7 @@ function App() {
   const qrStreamRef = useRef<MediaStream | null>(null)
   const qrAnimationFrameRef = useRef<number | null>(null)
   const qrDetectorRef = useRef<QrCodeDetectorLike | null>(null)
+  const [postCreateBackupOpen, setPostCreateBackupOpen] = useState(false)
 
   useEffect(() => {
     if (!assets.some((asset) => getAssetKey(asset) === selectedAssetKey)) {
@@ -566,12 +595,19 @@ function App() {
     setSendStep('asset')
   }
 
+  async function handleCreateWallet() {
+    const created = await createWallet()
+    if (created) {
+      setPostCreateBackupOpen(true)
+    }
+  }
+
   if (!session) {
     return (
       <main className="app-shell app-center">
         <Brand />
         <div className="button-row onboarding-actions">
-          <button onClick={() => void createWallet()} disabled={isCreating}>
+          <button onClick={() => void handleCreateWallet()} disabled={isCreating}>
             {isCreating ? 'Creating...' : 'Create new wallet'}
           </button>
           <button
@@ -634,8 +670,10 @@ function App() {
         </button>
       </header>
 
-      {statusMessage ? <div className="banner success">{statusMessage}</div> : null}
-      {error ? <div className="banner error">{error}</div> : null}
+      {!postCreateBackupOpen && statusMessage ? (
+        <div className="banner success">{statusMessage}</div>
+      ) : null}
+      {!postCreateBackupOpen && error ? <div className="banner error">{error}</div> : null}
 
       <section className="panel screen-panel">
         {networkPickerOpen ? (
@@ -1080,35 +1118,13 @@ function App() {
               <p className="screen-eyebrow">Recovery</p>
               <h1 className="screen-title">Back up your wallet</h1>
               <p className="screen-subtitle">
-                Create a recovery file you can use to restore this wallet later with the original passkey.
+                Public wallet data for restore elsewhere—not private keys. Passkey stays in the enclave.
               </p>
             </div>
 
             <div className="backup-card">
               <div className="card-stack">
-                <div className="backup-checklist" aria-label="Backup guidance">
-                  <div className="backup-checklist-item">
-                    <span className="backup-checklist-step">1</span>
-                    <div>
-                      <p>Download the recovery file from this screen.</p>
-                      <p className="muted">A JSON file will be saved to your device.</p>
-                    </div>
-                  </div>
-                  <div className="backup-checklist-item">
-                    <span className="backup-checklist-step">2</span>
-                    <div>
-                      <p>Move it to a safe place.</p>
-                      <p className="muted">Use encrypted storage or another location you control.</p>
-                    </div>
-                  </div>
-                  <div className="backup-checklist-item">
-                    <span className="backup-checklist-step">3</span>
-                    <div>
-                      <p>Test the restore flow when convenient.</p>
-                      <p className="muted">Use “Restore existing wallet” and choose the saved file.</p>
-                    </div>
-                  </div>
-                </div>
+                <BackupRecoveryChecklist />
 
                 <div className="button-row">
                   <button
@@ -1125,6 +1141,55 @@ function App() {
         ) : null}
       </section>
 
+      {postCreateBackupOpen ? (
+        <div
+          className="qr-scanner-overlay onboarding-backup-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="onboarding-backup-title"
+        >
+          <div className="onboarding-backup-dialog">
+            <div className="screen-copy onboarding-backup-copy">
+              <p className="screen-eyebrow">Almost done</p>
+              <h1 id="onboarding-backup-title" className="screen-title">
+                Create your recovery file
+              </h1>
+              <p className="screen-subtitle">
+                Save a file to restore on another device. No private keys in the file.
+              </p>
+            </div>
+
+            <div className="backup-card">
+              <div className="card-stack">
+                <BackupRecoveryChecklist />
+                {error ? <div className="banner error">{error}</div> : null}
+                <div className="button-row onboarding-backup-actions">
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const ok = await exportRecoveryFile()
+                      if (ok) {
+                        setPostCreateBackupOpen(false)
+                      }
+                    }}
+                    disabled={isExportingRecoveryFile}
+                  >
+                    {isExportingRecoveryFile ? 'Creating backup...' : 'Create recovery file'}
+                  </button>
+                  <button
+                    type="button"
+                    className="button-secondary"
+                    disabled={isExportingRecoveryFile}
+                    onClick={() => setPostCreateBackupOpen(false)}
+                  >
+                    Continue without file
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </main>
   )
 }

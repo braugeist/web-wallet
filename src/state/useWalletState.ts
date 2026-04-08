@@ -95,30 +95,29 @@ export function useWalletState() {
     void refresh(session)
   }, [refresh, session])
 
-  const createWallet = useCallback(
-    async () => {
-      if (!isPasskeySupported()) {
-        setError('Passkeys require a secure browser context with WebAuthn support.')
-        return
-      }
+  const createWallet = useCallback(async (): Promise<boolean> => {
+    if (!isPasskeySupported()) {
+      setError('Passkeys require a secure browser context with WebAuthn support.')
+      return false
+    }
 
-      setIsCreating(true)
-      setError(null)
-      setStatusMessage(null)
+    setIsCreating(true)
+    setError(null)
+    setStatusMessage(null)
 
-      try {
-        const nextSession = await registerPasskey('WebWallet')
-        saveWalletSession(nextSession)
-        setSession(nextSession)
-        setStatusMessage('Wallet created. Fund the address to start sending.')
-      } catch (caughtError) {
-        setError(getErrorMessage(caughtError))
-      } finally {
-        setIsCreating(false)
-      }
-    },
-    [],
-  )
+    try {
+      const nextSession = await registerPasskey('WebWallet')
+      saveWalletSession(nextSession)
+      setSession(nextSession)
+      setStatusMessage('Wallet created. Fund the address to start sending.')
+      return true
+    } catch (caughtError) {
+      setError(getErrorMessage(caughtError))
+      return false
+    } finally {
+      setIsCreating(false)
+    }
+  }, [])
 
   const reconnectWallet = useCallback(async () => {
     const nextSession = loadWalletSession()
@@ -162,10 +161,10 @@ export function useWalletState() {
     setStatusMessage('Saved wallet metadata removed from this browser.')
   }, [])
 
-  const exportRecoveryFile = useCallback(async () => {
+  const exportRecoveryFile = useCallback(async (): Promise<boolean> => {
     if (!session) {
       setError('Create or restore a wallet first.')
-      return
+      return false
     }
 
     setIsExportingRecoveryFile(true)
@@ -174,9 +173,11 @@ export function useWalletState() {
 
     try {
       await triggerRecoveryFileDownload(session)
-      setStatusMessage('Recovery file exported. Store it somewhere safe.')
+      setStatusMessage('Recovery file saved (no private keys).')
+      return true
     } catch (caughtError) {
       setError(getErrorMessage(caughtError))
+      return false
     } finally {
       setIsExportingRecoveryFile(false)
     }

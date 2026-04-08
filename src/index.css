@@ -803,6 +803,36 @@ a.address-actions-menu-item {
   background: rgba(0, 0, 0, 0.48);
 }
 
+.onboarding-backup-overlay {
+  z-index: 50;
+}
+
+.onboarding-backup-dialog {
+  width: min(440px, 100%);
+  max-height: min(90vh, 720px);
+  overflow-y: auto;
+  display: grid;
+  gap: 18px;
+  padding: 22px 22px 26px;
+  border-radius: 22px;
+  background: var(--background);
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.2);
+}
+
+.onboarding-backup-copy {
+  margin: 0;
+  text-align: left;
+}
+
+.onboarding-backup-actions {
+  flex-direction: column;
+}
+
+.onboarding-backup-actions button {
+  width: 100%;
+  justify-content: center;
+}
+
 .qr-scanner-card {
   width: min(420px, 100%);
   display: grid;
