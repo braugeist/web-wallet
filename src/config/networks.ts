@@ -45,7 +45,7 @@ export const supportedNetworks: SupportedNetworkConfig[] = [
   },
 ]
 
-export const defaultNetwork = supportedNetworks[1]
+export const defaultNetwork = supportedNetworks[0]
 
 export function getSupportedNetwork(chainId: number) {
   const network = supportedNetworks.find((candidate) => candidate.chainId === chainId)

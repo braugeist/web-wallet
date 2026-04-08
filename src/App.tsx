@@ -4,6 +4,7 @@ import { QRCodeSVG } from 'qrcode.react'
 import { getAddress, isAddress } from 'viem'
 
 import type { SupportedNetworkConfig } from './config/networks'
+import { supportedNetworks } from './config/networks'
 import { formatAmount, normalizeAmountInput } from './lib/utils/amounts'
 import { isSupportedErc20GasAsset } from './lib/chains/evm/paymaster'
 import { truncateAddress, getAddressExplorerUrl, getTransactionExplorerUrl } from './lib/utils/format'
@@ -640,18 +641,19 @@ function App() {
         {networkPickerOpen ? (
           <div className="network-picker" ref={networkPickerRef}>
             <span className="network-picker-title">Select network</span>
-            <button
-              className={selectedChainId === 11155111 ? 'network-option active' : 'network-option'}
-              onClick={() => { setSelectedChainId(11155111); setNetworkPickerOpen(false) }}
-            >
-              Sepolia
-            </button>
-            <button
-              className={selectedChainId === 1 ? 'network-option active' : 'network-option'}
-              onClick={() => { setSelectedChainId(1); setNetworkPickerOpen(false) }}
-            >
-              Ethereum Mainnet
-            </button>
+            {supportedNetworks.map((net) => (
+              <button
+                key={net.chainId}
+                type="button"
+                className={selectedChainId === net.chainId ? 'network-option active' : 'network-option'}
+                onClick={() => {
+                  setSelectedChainId(net.chainId)
+                  setNetworkPickerOpen(false)
+                }}
+              >
+                {net.label}
+              </button>
+            ))}
           </div>
         ) : null}
         {menuOpen ? (
