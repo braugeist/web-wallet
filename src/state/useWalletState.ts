@@ -14,6 +14,7 @@ import {
   parseRecoveryFile,
   triggerRecoveryFileDownload,
 } from '../lib/storage/recoveryFile'
+import { loadSelectedChainId, saveSelectedChainId } from '../lib/storage/selectedChain'
 import {
   clearWalletSession,
   loadWalletSession,
@@ -30,7 +31,13 @@ function getErrorMessage(error: unknown) {
 }
 
 export function useWalletState() {
-  const [selectedChainId, setSelectedChainId] = useState<SupportedChainId>(defaultNetwork.chainId)
+  const [selectedChainId, setSelectedChainId] = useState<SupportedChainId>(
+    () => loadSelectedChainId() ?? defaultNetwork.chainId,
+  )
+
+  useEffect(() => {
+    saveSelectedChainId(selectedChainId)
+  }, [selectedChainId])
   const [session, setSession] = useState<WalletSession | null>(() => loadWalletSession())
   const [address, setAddress] = useState<Address | null>(null)
   const [balances, setBalances] = useState<WalletBalance[]>([])
