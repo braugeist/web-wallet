@@ -735,6 +735,63 @@ button:disabled {
   height: 16px;
 }
 
+.address-actions-dropdown {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.address-actions-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 25;
+  display: grid;
+  gap: 2px;
+  min-width: 11rem;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--background-elevated);
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.12);
+  backdrop-filter: blur(18px);
+}
+
+.address-actions-menu-item {
+  all: unset;
+  cursor: pointer;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  font-family: inherit;
+  color: var(--foreground);
+  background: transparent;
+  transition: background 0.15s, color 0.15s;
+}
+
+a.address-actions-menu-item {
+  text-decoration: none;
+}
+
+.address-actions-menu-item:hover {
+  background: var(--surface);
+}
+
+.address-actions-menu-icon {
+  display: inline-flex;
+  color: var(--muted);
+}
+
+.address-actions-menu-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
 .qr-scanner-overlay {
   position: fixed;
   inset: 0;

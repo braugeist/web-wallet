@@ -6,7 +6,7 @@ import { getAddress, isAddress } from 'viem'
 import type { SupportedNetworkConfig } from './config/networks'
 import { formatAmount, normalizeAmountInput } from './lib/utils/amounts'
 import { isSupportedErc20GasAsset } from './lib/chains/evm/paymaster'
-import { truncateAddress, getTransactionExplorerUrl } from './lib/utils/format'
+import { truncateAddress, getAddressExplorerUrl, getTransactionExplorerUrl } from './lib/utils/format'
 import { useWalletState } from './state/useWalletState'
 import type { TransferQuote, WalletAsset } from './lib/chains/types'
 
@@ -210,11 +210,13 @@ function App() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [networkPickerOpen, setNetworkPickerOpen] = useState(false)
   const [addressCopied, setAddressCopied] = useState(false)
+  const [receiveActionsOpen, setReceiveActionsOpen] = useState(false)
   const [qrScannerOpen, setQrScannerOpen] = useState(false)
   const [qrScannerError, setQrScannerError] = useState<string | null>(null)
   const [qrScannerReady, setQrScannerReady] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
   const menuTriggerRef = useRef<HTMLButtonElement>(null)
+  const receiveActionsRef = useRef<HTMLDivElement>(null)
   const networkPickerRef = useRef<HTMLDivElement>(null)
   const networkTriggerRef = useRef<HTMLButtonElement>(null)
   const qrVideoRef = useRef<HTMLVideoElement>(null)
@@ -244,7 +246,7 @@ function App() {
   }, [assets, resetTransfer, selectedChainId])
 
   useEffect(() => {
-    const open = menuOpen || networkPickerOpen
+    const open = menuOpen || networkPickerOpen || receiveActionsOpen
     if (!open) return
     function handleClick(event: MouseEvent) {
       const target = event.target as Node
@@ -264,10 +266,28 @@ function App() {
       ) {
         setNetworkPickerOpen(false)
       }
+      if (
+        receiveActionsOpen
+        && receiveActionsRef.current
+        && !receiveActionsRef.current.contains(target)
+      ) {
+        setReceiveActionsOpen(false)
+      }
     }
     document.addEventListener('mousedown', handleClick)
     return () => document.removeEventListener('mousedown', handleClick)
-  }, [menuOpen, networkPickerOpen])
+  }, [menuOpen, networkPickerOpen, receiveActionsOpen])
+
+  useEffect(() => {
+    if (!receiveActionsOpen) return
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setReceiveActionsOpen(false)
+      }
+    }
+    document.addEventListener('keydown', handleEscape)
+    return () => document.removeEventListener('keydown', handleEscape)
+  }, [receiveActionsOpen])
 
   useEffect(() => {
     if (!addressCopied) return
@@ -469,6 +489,7 @@ function App() {
   const normalizedRecipient = recipientIsValid ? getAddress(recipientValue) : null
   const sendStepNumber = getSendStepNumber(sendStep)
   const resultUrl = result ? getTransactionExplorerUrl(network, result.transactionHash) : undefined
+  const receiveExplorerUrl = address ? getAddressExplorerUrl(network, address) : undefined
 
   async function handleCopyAddress() {
     if (!address) return
@@ -485,6 +506,7 @@ function App() {
     setActiveScreen(nextScreen)
     setMenuOpen(false)
     setNetworkPickerOpen(false)
+    setReceiveActionsOpen(false)
   }
 
   function handleToggleMenu() {
@@ -492,6 +514,7 @@ function App() {
       const next = !prev
       if (next) {
         setNetworkPickerOpen(false)
+        setReceiveActionsOpen(false)
       }
       return next
     })
@@ -502,6 +525,7 @@ function App() {
       const next = !prev
       if (next) {
         setMenuOpen(false)
+        setReceiveActionsOpen(false)
       }
       return next
     })
@@ -722,15 +746,52 @@ function App() {
               <p className="muted">{network.label}</p>
               <div className={addressCopied ? 'block-code address-copy-field copied' : 'block-code address-copy-field'}>
                 <code>{address}</code>
-                <button
-                  type="button"
-                  className="copy-address-button"
-                  onClick={() => void handleCopyAddress()}
-                  aria-label={addressCopied ? 'Address copied' : 'Copy wallet address'}
-                  title={addressCopied ? 'Address copied' : 'Copy address'}
-                >
-                  {addressCopied ? <CheckIcon /> : <CopyIcon />}
-                </button>
+                <div className="address-actions-dropdown" ref={receiveActionsRef}>
+                  <button
+                    type="button"
+                    className="copy-address-button"
+                    aria-expanded={receiveActionsOpen}
+                    aria-haspopup="menu"
+                    aria-label="Address actions"
+                    title="Address actions"
+                    onClick={() => setReceiveActionsOpen((open) => !open)}
+                  >
+                    <MoreVerticalIcon />
+                  </button>
+                  {receiveActionsOpen ? (
+                    <div className="address-actions-menu" role="menu">
+                      <button
+                        type="button"
+                        role="menuitem"
+                        className="address-actions-menu-item"
+                        onClick={() => {
+                          void handleCopyAddress()
+                          setReceiveActionsOpen(false)
+                        }}
+                      >
+                        <span className="address-actions-menu-icon" aria-hidden>
+                          <CopyIcon />
+                        </span>
+                        Copy
+                      </button>
+                      {receiveExplorerUrl ? (
+                        <a
+                          href={receiveExplorerUrl}
+                          role="menuitem"
+                          className="address-actions-menu-item"
+                          target="_blank"
+                          rel="noreferrer"
+                          onClick={() => setReceiveActionsOpen(false)}
+                        >
+                          <span className="address-actions-menu-icon" aria-hidden>
+                            <ExplorerLinkIcon />
+                          </span>
+                          Explorer
+                        </a>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </div>
               </div>
             </div>
           </div>
@@ -1082,12 +1143,21 @@ function renderQuote(quote: TransferQuote | null) {
   )
 }
 
-function CopyIcon() {
+function MoreVerticalIcon() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">
-      <rect x="9" y="9" width="10" height="10" rx="2" fill="none" stroke="currentColor" strokeWidth="1.8" />
+      <circle cx="12" cy="6" r="1.75" fill="currentColor" />
+      <circle cx="12" cy="12" r="1.75" fill="currentColor" />
+      <circle cx="12" cy="18" r="1.75" fill="currentColor" />
+    </svg>
+  )
+}
+
+function ExplorerLinkIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
       <path
-        d="M7 15H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v1"
+        d="M18 13v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"
         fill="none"
         stroke="currentColor"
         strokeWidth="1.8"
@@ -1098,14 +1168,15 @@ function CopyIcon() {
   )
 }
 
-function CheckIcon() {
+function CopyIcon() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">
+      <rect x="9" y="9" width="10" height="10" rx="2" fill="none" stroke="currentColor" strokeWidth="1.8" />
       <path
-        d="M5 12.5 9.5 17 19 7.5"
+        d="M7 15H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v1"
         fill="none"
         stroke="currentColor"
-        strokeWidth="2"
+        strokeWidth="1.8"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
