@@ -536,6 +536,7 @@ function App() {
   const selectedGasAsset = gasPaymentOptions.find((asset) => getAssetKey(asset) === selectedGasAssetKey)
     ?? gasPaymentOptions[0]
     ?? getDefaultGasAsset(assets)
+  const nonZeroBalances = balances.filter((balance) => balance.value > 0n)
   const selectedBalance = balances.find((balance) => getAssetKey(balance.asset) === getAssetKey(selectedAsset))
   const selectedGasBalance = balances.find((balance) => getAssetKey(balance.asset) === getAssetKey(selectedGasAsset))
   const recipientValue = recipient.trim()
@@ -799,26 +800,33 @@ function App() {
             </div>
 
             <div className="asset-list">
-              {balances.map((balance) => (
-                <article
-                  className="asset-row clickable"
-                  key={balance.asset.type === 'native' ? 'native' : balance.asset.address}
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => {
-                    handleSelectedAssetChange(getAssetKey(balance.asset), 'recipient')
-                    setActiveScreen('send')
-                  }}
-                >
-                  <div>
-                    <p className="asset-symbol">{balance.asset.symbol}</p>
-                    <p className="muted">{balance.asset.name}</p>
-                  </div>
-                  <div className="asset-value">
-                    {formatAmount(balance.value, balance.asset.decimals)} {balance.asset.symbol}
-                  </div>
-                </article>
-              ))}
+              {nonZeroBalances.length > 0 ? (
+                nonZeroBalances.map((balance) => (
+                  <article
+                    className="asset-row clickable"
+                    key={balance.asset.type === 'native' ? 'native' : balance.asset.address}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => {
+                      handleSelectedAssetChange(getAssetKey(balance.asset), 'recipient')
+                      setActiveScreen('send')
+                    }}
+                  >
+                    <div>
+                      <p className="asset-symbol">{balance.asset.symbol}</p>
+                      <p className="muted">{balance.asset.name}</p>
+                    </div>
+                    <div className="asset-value">
+                      {formatAmount(balance.value, balance.asset.decimals)} {balance.asset.symbol}
+                    </div>
+                  </article>
+                ))
+              ) : (
+                <div className="callout">
+                  <p>No funded assets yet.</p>
+                  <p className="muted">Only balances above zero appear here.</p>
+                </div>
+              )}
             </div>
           </div>
         ) : null}
@@ -933,7 +941,7 @@ function App() {
                 <div className="card-stack">
                   <p className="muted">Choose which asset you want to send.</p>
                   <div className="asset-list">
-                    {balances.map((balance) => {
+                    {nonZeroBalances.map((balance) => {
                       const assetKey = getAssetKey(balance.asset)
                       const isSelected = assetKey === getAssetKey(selectedAsset)
 
@@ -958,8 +966,13 @@ function App() {
                       )
                     })}
                   </div>
+                  {nonZeroBalances.length === 0 ? (
+                    <div className="banner warning">Fund this wallet first to send assets.</div>
+                  ) : null}
                   <div className="button-row">
-                    <button onClick={() => setSendStep('recipient')}>Continue</button>
+                    <button onClick={() => setSendStep('recipient')} disabled={nonZeroBalances.length === 0}>
+                      Continue
+                    </button>
                   </div>
                 </div>
               ) : null}
