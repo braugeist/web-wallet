@@ -14,6 +14,7 @@ import {
   parseRecoveryFile,
   triggerRecoveryFileDownload,
 } from '../lib/storage/recoveryFile'
+import { loadNetworkRpcUrls, saveNetworkRpcUrls } from '../lib/storage/networkRpcUrl'
 import { loadSelectedChainId, saveSelectedChainId } from '../lib/storage/selectedChain'
 import {
   clearWalletSession,
@@ -38,6 +39,7 @@ export function useWalletState() {
   useEffect(() => {
     saveSelectedChainId(selectedChainId)
   }, [selectedChainId])
+  const [networkRpcUrls, setNetworkRpcUrls] = useState(() => loadNetworkRpcUrls())
   const [session, setSession] = useState<WalletSession | null>(() => loadWalletSession())
   const [address, setAddress] = useState<Address | null>(null)
   const [balances, setBalances] = useState<WalletBalance[]>([])
@@ -52,7 +54,19 @@ export function useWalletState() {
   const [isSending, setIsSending] = useState(false)
   const [isExportingRecoveryFile, setIsExportingRecoveryFile] = useState(false)
 
-  const network = useMemo(() => getSupportedNetwork(selectedChainId), [selectedChainId])
+  const baseNetwork = useMemo(() => getSupportedNetwork(selectedChainId), [selectedChainId])
+  const customRpcUrl = networkRpcUrls[selectedChainId]?.trim()
+  const network = useMemo(
+    () => (
+      customRpcUrl
+        ? {
+            ...baseNetwork,
+            rpcUrl: customRpcUrl,
+          }
+        : baseNetwork
+    ),
+    [baseNetwork, customRpcUrl],
+  )
   const assets = useMemo(() => getCuratedAssets(selectedChainId), [selectedChainId])
 
   const refresh = useCallback(
@@ -256,7 +270,39 @@ export function useWalletState() {
     }
   }, [network, quote, refresh, session])
 
+  const setNetworkRpcUrl = useCallback(
+    (rpcUrl: string) => {
+      const nextRpcUrl = rpcUrl.trim()
+      if (!nextRpcUrl) return
+
+      setNetworkRpcUrls((current) => {
+        const next = {
+          ...current,
+          [selectedChainId]: nextRpcUrl,
+        }
+        saveNetworkRpcUrls(next)
+        return next
+      })
+    },
+    [selectedChainId],
+  )
+
+  const clearNetworkRpcUrl = useCallback(() => {
+    setNetworkRpcUrls((current) => {
+      if (!current[selectedChainId]) {
+        return current
+      }
+
+      const next = { ...current }
+      delete next[selectedChainId]
+      saveNetworkRpcUrls(next)
+      return next
+    })
+  }, [selectedChainId])
+
   return {
+    clearNetworkRpcUrl,
+    defaultNetworkRpcUrl: baseNetwork.rpcUrl,
     address,
     assets,
     balances,
@@ -272,6 +318,7 @@ export function useWalletState() {
     isRestoringFromFile,
     isSending,
     network,
+    setNetworkRpcUrl,
     prepareTransfer,
     quote,
     reconnectWallet,
@@ -284,5 +331,6 @@ export function useWalletState() {
     session,
     setSelectedChainId,
     statusMessage,
+    usesCustomRpcUrl: Boolean(customRpcUrl),
   }
 }

@@ -11,7 +11,7 @@ import { truncateAddress, getAddressExplorerUrl, getTransactionExplorerUrl } fro
 import { useWalletState } from './state/useWalletState'
 import type { TransferQuote, WalletAsset } from './lib/chains/types'
 
-type AppScreen = 'assets' | 'receive' | 'send' | 'backup'
+type AppScreen = 'assets' | 'receive' | 'send' | 'settings'
 type SendStep = 'asset' | 'recipient' | 'amount' | 'review' | 'summary'
 
 type BarcodeDetectorResultLike = {
@@ -149,6 +149,15 @@ function parseRecipientFromQr(rawValue: string) {
   return matchedAddress && isAddress(matchedAddress) ? getAddress(matchedAddress) : null
 }
 
+function isValidRpcUrl(value: string) {
+  try {
+    const url = new URL(value)
+    return url.protocol === 'http:' || url.protocol === 'https:'
+  } catch {
+    return false
+  }
+}
+
 function BackupRecoveryChecklist() {
   return (
     <div className="backup-checklist" aria-label="Backup guidance">
@@ -206,7 +215,9 @@ function App() {
     address,
     assets,
     balances,
+    clearNetworkRpcUrl,
     createWallet,
+    defaultNetworkRpcUrl,
     error,
     exportRecoveryFile,
     isCreating,
@@ -225,8 +236,10 @@ function App() {
     selectedChainId,
     sendTransfer,
     session,
+    setNetworkRpcUrl,
     setSelectedChainId,
     statusMessage,
+    usesCustomRpcUrl,
   } = useWalletState()
 
   const [activeScreen, setActiveScreen] = useState<AppScreen>('assets')
@@ -243,6 +256,9 @@ function App() {
   const [qrScannerOpen, setQrScannerOpen] = useState(false)
   const [qrScannerError, setQrScannerError] = useState<string | null>(null)
   const [qrScannerReady, setQrScannerReady] = useState(false)
+  const [rpcUrlInput, setRpcUrlInput] = useState(() => network.rpcUrl)
+  const [rpcUrlMessage, setRpcUrlMessage] = useState<string | null>(null)
+  const [rpcUrlError, setRpcUrlError] = useState<string | null>(null)
   const menuRef = useRef<HTMLDivElement>(null)
   const menuTriggerRef = useRef<HTMLButtonElement>(null)
   const receiveActionsRef = useRef<HTMLDivElement>(null)
@@ -324,6 +340,15 @@ function App() {
     const timeoutId = window.setTimeout(() => setAddressCopied(false), 1500)
     return () => window.clearTimeout(timeoutId)
   }, [addressCopied])
+
+  useEffect(() => {
+    setRpcUrlInput(network.rpcUrl)
+  }, [network.rpcUrl])
+
+  useEffect(() => {
+    setRpcUrlMessage(null)
+    setRpcUrlError(null)
+  }, [selectedChainId])
 
   const handleRecipientChange = useCallback((nextRecipient: string) => {
     setRecipient(nextRecipient)
@@ -602,6 +627,34 @@ function App() {
     }
   }
 
+  function handleSaveRpcUrl() {
+    const nextRpcUrl = rpcUrlInput.trim()
+
+    if (!nextRpcUrl) {
+      setRpcUrlError('RPC URL is required.')
+      setRpcUrlMessage(null)
+      return
+    }
+
+    if (!isValidRpcUrl(nextRpcUrl)) {
+      setRpcUrlError('Enter a valid HTTP or HTTPS RPC URL.')
+      setRpcUrlMessage(null)
+      return
+    }
+
+    setNetworkRpcUrl(nextRpcUrl)
+    setRpcUrlInput(nextRpcUrl)
+    setRpcUrlError(null)
+    setRpcUrlMessage(`RPC URL updated for ${network.label}.`)
+  }
+
+  function handleResetRpcUrl() {
+    clearNetworkRpcUrl()
+    setRpcUrlInput(defaultNetworkRpcUrl)
+    setRpcUrlError(null)
+    setRpcUrlMessage(`Using the default RPC URL for ${network.label}.`)
+  }
+
   if (!session) {
     return (
       <main className="app-shell app-center">
@@ -716,10 +769,10 @@ function App() {
               Receive
             </button>
             <button
-              className={activeScreen === 'backup' ? 'app-menu-action active' : 'app-menu-action'}
-              onClick={() => handleNavigate('backup')}
+              className={activeScreen === 'settings' ? 'app-menu-action active' : 'app-menu-action'}
+              onClick={() => handleNavigate('settings')}
             >
-              Backup wallet
+              Settings
             </button>
           </div>
         ) : null}
@@ -1112,20 +1165,64 @@ function App() {
           </div>
         ) : null}
 
-        {activeScreen === 'backup' ? (
-          <div className="screen-content backup-content">
+        {activeScreen === 'settings' ? (
+          <div className="screen-content settings-content">
             <div className="screen-copy">
-              <p className="screen-eyebrow">Recovery</p>
-              <h1 className="screen-title">Back up your wallet</h1>
+              <p className="screen-eyebrow">Preferences</p>
+              <h1 className="screen-title">Settings</h1>
               <p className="screen-subtitle">
-                Public wallet data for restore elsewhere—not private keys. Passkey stays in the enclave.
+                Configure the network RPC endpoint and manage your wallet backup.
               </p>
             </div>
 
             <div className="backup-card">
               <div className="card-stack">
-                <BackupRecoveryChecklist />
+                <label className="field">
+                  <span>Network RPC URL</span>
+                  <input
+                    value={rpcUrlInput}
+                    onChange={(event) => {
+                      setRpcUrlInput(event.target.value)
+                      setRpcUrlError(null)
+                      setRpcUrlMessage(null)
+                    }}
+                    placeholder={defaultNetworkRpcUrl}
+                    type="url"
+                  />
+                </label>
+                <p className="muted">Current network: {network.label}</p>
+                {rpcUrlMessage ? <div className="banner success">{rpcUrlMessage}</div> : null}
+                {rpcUrlError ? <div className="banner error">{rpcUrlError}</div> : null}
+                <div className="button-row">
+                  <button
+                    type="button"
+                    onClick={handleSaveRpcUrl}
+                    disabled={!rpcUrlInput.trim() || rpcUrlInput.trim() === network.rpcUrl}
+                  >
+                    Save RPC URL
+                  </button>
+                  <button
+                    type="button"
+                    className="button-secondary"
+                    onClick={handleResetRpcUrl}
+                    disabled={!usesCustomRpcUrl}
+                  >
+                    Use default RPC URL
+                  </button>
+                </div>
+              </div>
+            </div>
 
+            <div className="backup-card">
+              <div className="card-stack">
+                <div className="screen-copy">
+                  <p className="screen-eyebrow">Recovery</p>
+                  <h2 className="settings-section-title">Backup wallet</h2>
+                  <p className="screen-subtitle">
+                    Public wallet data for restore elsewhere - not private keys. Passkey stays in the enclave.
+                  </p>
+                </div>
+                <BackupRecoveryChecklist />
                 <div className="button-row">
                   <button
                     type="button"
