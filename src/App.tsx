@@ -847,51 +847,65 @@ function App() {
               <p className="muted">{network.label}</p>
               <div className={addressCopied ? 'block-code address-copy-field copied' : 'block-code address-copy-field'}>
                 <code>{address}</code>
-                <div className="address-actions-dropdown" ref={receiveActionsRef}>
+                <div className="address-action-buttons">
                   <button
                     type="button"
-                    className="copy-address-button"
-                    aria-expanded={receiveActionsOpen}
-                    aria-haspopup="menu"
-                    aria-label="Address actions"
-                    title="Address actions"
-                    onClick={() => setReceiveActionsOpen((open) => !open)}
+                    className="copy-address-button address-copy-shortcut"
+                    aria-label={addressCopied ? 'Address copied' : 'Copy address'}
+                    title={addressCopied ? 'Address copied' : 'Copy address'}
+                    onClick={() => {
+                      void handleCopyAddress()
+                      setReceiveActionsOpen(false)
+                    }}
                   >
-                    <MoreVerticalIcon />
+                    <CopyIcon />
                   </button>
-                  {receiveActionsOpen ? (
-                    <div className="address-actions-menu" role="menu">
-                      <button
-                        type="button"
-                        role="menuitem"
-                        className="address-actions-menu-item"
-                        onClick={() => {
-                          void handleCopyAddress()
-                          setReceiveActionsOpen(false)
-                        }}
-                      >
-                        <span className="address-actions-menu-icon" aria-hidden>
-                          <CopyIcon />
-                        </span>
-                        Copy
-                      </button>
-                      {receiveExplorerUrl ? (
-                        <a
-                          href={receiveExplorerUrl}
+                  <div className="address-actions-dropdown" ref={receiveActionsRef}>
+                    <button
+                      type="button"
+                      className="copy-address-button"
+                      aria-expanded={receiveActionsOpen}
+                      aria-haspopup="menu"
+                      aria-label="Address actions"
+                      title="Address actions"
+                      onClick={() => setReceiveActionsOpen((open) => !open)}
+                    >
+                      <MoreVerticalIcon />
+                    </button>
+                    {receiveActionsOpen ? (
+                      <div className="address-actions-menu" role="menu">
+                        <button
+                          type="button"
                           role="menuitem"
                           className="address-actions-menu-item"
-                          target="_blank"
-                          rel="noreferrer"
-                          onClick={() => setReceiveActionsOpen(false)}
+                          onClick={() => {
+                            void handleCopyAddress()
+                            setReceiveActionsOpen(false)
+                          }}
                         >
                           <span className="address-actions-menu-icon" aria-hidden>
-                            <ExplorerLinkIcon />
+                            <CopyIcon />
                           </span>
-                          Explorer
-                        </a>
-                      ) : null}
-                    </div>
-                  ) : null}
+                          Copy
+                        </button>
+                        {receiveExplorerUrl ? (
+                          <a
+                            href={receiveExplorerUrl}
+                            role="menuitem"
+                            className="address-actions-menu-item"
+                            target="_blank"
+                            rel="noreferrer"
+                            onClick={() => setReceiveActionsOpen(false)}
+                          >
+                            <span className="address-actions-menu-icon" aria-hidden>
+                              <ExplorerLinkIcon />
+                            </span>
+                            Explorer
+                          </a>
+                        ) : null}
+                      </div>
+                    ) : null}
+                  </div>
                 </div>
               </div>
             </div>

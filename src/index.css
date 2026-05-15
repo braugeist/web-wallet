@@ -714,6 +714,13 @@ button:disabled {
   border-color: var(--border-strong);
 }
 
+.address-action-buttons {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
 .copy-address-button {
   display: inline-flex;
   align-items: center;
@@ -734,7 +741,7 @@ button:disabled {
   background: var(--surface);
 }
 
-.address-copy-field.copied .copy-address-button {
+.address-copy-field.copied .address-copy-shortcut {
   color: var(--foreground);
   background: var(--surface);
 }
