@@ -454,10 +454,6 @@ strong {
   flex-wrap: wrap;
 }
 
-.compact-button-row {
-  margin-top: 8px;
-}
-
 .onboarding-actions {
   justify-content: center;
 }

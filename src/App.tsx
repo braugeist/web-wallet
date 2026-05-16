@@ -841,13 +841,6 @@ function App() {
                 <p className="screen-subtitle">Tap any balance to start a transfer.</p>
               </div>
               <div className="screen-header-actions">
-                <button
-                  type="button"
-                  className="button-secondary button-sm"
-                  onClick={() => handleNavigate('onramp')}
-                >
-                  Buy
-                </button>
                 {refreshCurrentWallet ? (
                   <button
                     type="button"
@@ -889,15 +882,6 @@ function App() {
                 <div className="callout">
                   <p>No funded assets yet.</p>
                   <p className="muted">Only balances above zero appear here.</p>
-                  <div className="button-row compact-button-row">
-                    <button
-                      type="button"
-                      className="button-secondary button-sm"
-                      onClick={() => handleNavigate('onramp')}
-                    >
-                      Buy crypto
-                    </button>
-                  </div>
                 </div>
               )}
             </div>
