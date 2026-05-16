@@ -5,6 +5,8 @@ export const MT_PELERIN_LOCAL_TEST_KEY = 'bec6626e-8913-497d-9835-6e6ae9edb144'
 
 const MT_PELERIN_WIDGET_URL = `${MT_PELERIN_WIDGET_ORIGIN}/`
 const DEFAULT_FIAT_CURRENCY = 'USD'
+const DEFAULT_PRIMARY_COLOR = '#111111'
+const DEFAULT_SUCCESS_COLOR = '#111111'
 const SUPPORTED_CHAIN_ID = 1
 const SUPPORTED_ONRAMP_ASSETS = new Set([
   'DAI',
@@ -36,7 +38,9 @@ type BuildMtPelerinOnrampUrlOptions = {
   cryptoCurrency: string
   fiatCurrency?: string
   integrationKey?: string
+  primaryColor?: string
   referralCode?: string
+  successColor?: string
 }
 
 function getConfiguredValue(value: string | undefined) {
@@ -56,8 +60,16 @@ export function getMtPelerinDefaultFiatCurrency() {
   return getConfiguredValue(env.VITE_MT_PELERIN_DEFAULT_FIAT) ?? DEFAULT_FIAT_CURRENCY
 }
 
+export function getMtPelerinPrimaryColor() {
+  return getConfiguredValue(env.VITE_MT_PELERIN_PRIMARY_COLOR) ?? DEFAULT_PRIMARY_COLOR
+}
+
 export function getMtPelerinReferralCode() {
   return getConfiguredValue(env.VITE_MT_PELERIN_REFERRAL_CODE)
+}
+
+export function getMtPelerinSuccessColor() {
+  return getConfiguredValue(env.VITE_MT_PELERIN_SUCCESS_COLOR) ?? DEFAULT_SUCCESS_COLOR
 }
 
 export function isMtPelerinSupportedAsset(asset: WalletAsset) {
@@ -70,7 +82,9 @@ export function buildMtPelerinOnrampUrl({
   cryptoCurrency,
   fiatCurrency = getMtPelerinDefaultFiatCurrency(),
   integrationKey = getMtPelerinIntegrationKey(),
+  primaryColor = getMtPelerinPrimaryColor(),
   referralCode = getMtPelerinReferralCode(),
+  successColor = getMtPelerinSuccessColor(),
 }: BuildMtPelerinOnrampUrlOptions) {
   const url = new URL(MT_PELERIN_WIDGET_URL)
   const supportedCurrencies = allowedCryptoCurrencies.filter(Boolean)
@@ -86,6 +100,8 @@ export function buildMtPelerinOnrampUrl({
   params.set('dnet', 'mainnet')
   params.set('bsc', fiatCurrency)
   params.set('bdc', cryptoCurrency)
+  params.set('primary', primaryColor)
+  params.set('success', successColor)
 
   if (supportedCurrencies.length > 0) {
     params.set('crys', supportedCurrencies.join(','))

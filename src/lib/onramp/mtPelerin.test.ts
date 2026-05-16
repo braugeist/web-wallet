@@ -14,7 +14,9 @@ describe('buildMtPelerinOnrampUrl', () => {
       cryptoCurrency: 'USDC',
       fiatCurrency: 'EUR',
       integrationKey: 'test-key',
+      primaryColor: '#111111',
       referralCode: 'web-wallet',
+      successColor: '#111111',
     }))
 
     expect(url.origin).toBe(MT_PELERIN_WIDGET_ORIGIN)
@@ -26,6 +28,8 @@ describe('buildMtPelerinOnrampUrl', () => {
     expect(url.searchParams.get('dnet')).toBe('mainnet')
     expect(url.searchParams.get('bsc')).toBe('EUR')
     expect(url.searchParams.get('bdc')).toBe('USDC')
+    expect(url.searchParams.get('primary')).toBe('#111111')
+    expect(url.searchParams.get('success')).toBe('#111111')
     expect(url.searchParams.get('crys')).toBe('ETH,USDC')
     expect(url.searchParams.get('addr')).toBe('0x0000000000000000000000000000000000000001')
     expect(url.searchParams.get('rfr')).toBe('web-wallet')
