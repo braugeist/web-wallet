@@ -347,6 +347,13 @@ strong {
   gap: 12px;
 }
 
+.screen-header-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
 .screen-eyebrow {
   font-size: 0.72rem;
   font-weight: 700;
@@ -447,6 +454,10 @@ strong {
   flex-wrap: wrap;
 }
 
+.compact-button-row {
+  margin-top: 8px;
+}
+
 .onboarding-actions {
   justify-content: center;
 }
@@ -479,6 +490,17 @@ button {
   min-height: 40px;
   padding: 0 12px;
   font-size: 0.85rem;
+}
+
+.button-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  padding: 0 16px;
+  border-radius: 999px;
+  text-decoration: none;
+  transition: border-color 0.15s, background 0.15s, color 0.15s, opacity 0.15s;
 }
 
 .title-icon-button {
@@ -632,6 +654,49 @@ button:disabled {
 
 .settings-content {
   gap: 20px;
+}
+
+.onramp-content {
+  gap: 20px;
+}
+
+.onramp-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(12rem, auto);
+  gap: 14px;
+  align-items: end;
+  padding: 16px 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.onramp-destination {
+  min-height: 46px;
+  display: grid;
+  align-content: center;
+  gap: 2px;
+  padding: 0 0 0 14px;
+  border-left: 2px solid var(--border);
+}
+
+.onramp-destination p:not(.screen-eyebrow):not(.muted) {
+  font-weight: 700;
+}
+
+.onramp-widget-shell {
+  overflow: hidden;
+  min-height: 680px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: #ffffff;
+}
+
+.onramp-widget-shell iframe {
+  display: block;
+  width: 100%;
+  min-height: 680px;
+  border: 0;
+  background: #ffffff;
 }
 
 .settings-section-title {
@@ -969,6 +1034,21 @@ a.address-actions-menu-item {
 
   .button-row {
     flex-direction: column;
+  }
+
+  .screen-header-actions {
+    align-self: flex-start;
+  }
+
+  .onramp-toolbar {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .onramp-destination {
+    padding: 12px 0 0;
+    border-top: 1px solid var(--border);
+    border-left: 0;
   }
 
   .field-input-action {
