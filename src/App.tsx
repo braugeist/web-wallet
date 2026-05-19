@@ -17,7 +17,7 @@ import { truncateAddress, getAddressExplorerUrl, getTransactionExplorerUrl } fro
 import { useWalletState } from './state/useWalletState'
 import type { TransferQuote, WalletAsset } from './lib/chains/types'
 
-type AppScreen = 'assets' | 'onramp' | 'receive' | 'send' | 'settings'
+type AppScreen = 'assets' | 'receive' | 'send' | 'settings'
 type SendStep = 'asset' | 'recipient' | 'amount' | 'review' | 'summary'
 
 type BarcodeDetectorResultLike = {
@@ -756,7 +756,7 @@ function App() {
               <button
                 className="topbar-address"
                 onClick={() => handleNavigate('receive')}
-                title="Open receive screen"
+                title="Open receive and fund screen"
               >
                 {truncateAddress(address)}
               </button>
@@ -807,12 +807,6 @@ function App() {
               Assets
             </button>
             <button
-              className={activeScreen === 'onramp' ? 'app-menu-action active' : 'app-menu-action'}
-              onClick={() => handleNavigate('onramp')}
-            >
-              Fund
-            </button>
-            <button
               className={activeScreen === 'send' ? 'app-menu-action active' : 'app-menu-action'}
               onClick={() => handleNavigate('send')}
             >
@@ -822,7 +816,7 @@ function App() {
               className={activeScreen === 'receive' ? 'app-menu-action active' : 'app-menu-action'}
               onClick={() => handleNavigate('receive')}
             >
-              Receive
+              Receive / Fund
             </button>
             <button
               className={activeScreen === 'settings' ? 'app-menu-action active' : 'app-menu-action'}
@@ -888,107 +882,12 @@ function App() {
           </div>
         ) : null}
 
-        {activeScreen === 'onramp' ? (
-          <div className="screen-content onramp-content">
-            <div className="screen-header">
-              <div className="screen-copy">
-                <p className="screen-eyebrow">Onramp</p>
-                <h1 className="screen-title">Fund your wallet</h1>
-                <p className="screen-subtitle">Add funds to this wallet through Mt Pelerin.</p>
-              </div>
-            </div>
-
-            {network.chainId !== 1 ? (
-              <div className="card-stack">
-                <div className="callout">
-                  <p>Mt Pelerin delivery is configured for Ethereum Mainnet.</p>
-                  <p className="muted">Switch networks before funding this wallet.</p>
-                </div>
-                <div className="button-row">
-                  <button
-                    type="button"
-                    onClick={() => setSelectedChainId(1)}
-                  >
-                    Switch to Ethereum Mainnet
-                  </button>
-                </div>
-              </div>
-            ) : null}
-
-            {network.chainId === 1 && address && selectedOnrampAsset && mtPelerinOnrampUrl ? (
-              <>
-                <div className="onramp-toolbar">
-                  <label className="field">
-                    <span>Asset</span>
-                    <select
-                      value={selectedOnrampAsset.symbol}
-                      onChange={(event) => {
-                        setSelectedOnrampAssetSymbol(event.target.value)
-                        setOnrampStatusMessage(null)
-                      }}
-                    >
-                      {onrampAssets.map((asset) => (
-                        <option key={getAssetKey(asset)} value={asset.symbol}>
-                          {asset.symbol} - {asset.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-
-                  <div className="onramp-destination">
-                    <p className="screen-eyebrow">Destination</p>
-                    <p>{truncateAddress(address)}</p>
-                    <p className="muted">Ethereum Mainnet</p>
-                  </div>
-                </div>
-
-                {onrampStatusMessage ? <div className="banner success">{onrampStatusMessage}</div> : null}
-
-                <div className="onramp-widget-shell">
-                  <iframe
-                    key={mtPelerinOnrampUrl}
-                    allow="usb; ethereum; clipboard-write; payment; microphone; camera"
-                    loading="lazy"
-                    src={mtPelerinOnrampUrl}
-                    title="Mt Pelerin onramp widget"
-                  />
-                </div>
-
-                <div className="button-row">
-                  <a
-                    className="button-link button-secondary"
-                    href={mtPelerinOnrampUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    Open in new tab
-                  </a>
-                  {refreshCurrentWallet ? (
-                    <button
-                      type="button"
-                      className="button-secondary"
-                      onClick={() => void refreshCurrentWallet()}
-                      disabled={isRefreshing}
-                    >
-                      {isRefreshing ? 'Refreshing...' : 'Refresh balances'}
-                    </button>
-                  ) : null}
-                </div>
-              </>
-            ) : null}
-
-            {network.chainId === 1 && onrampAssets.length === 0 ? (
-              <div className="banner warning">No Mt Pelerin-compatible mainnet assets are configured.</div>
-            ) : null}
-          </div>
-        ) : null}
-
         {activeScreen === 'receive' && address ? (
           <div className="screen-content receive-content">
             <div className="screen-copy screen-copy-center">
               <p className="screen-eyebrow">Receive</p>
-              <h1 className="screen-title">Share your address</h1>
-              <p className="screen-subtitle">Use the QR code or copy the wallet address below.</p>
+              <h1 className="screen-title">Receive or fund</h1>
+              <p className="screen-subtitle">Use your address directly, or add funds through Mt Pelerin.</p>
             </div>
 
             <div className="qr-card">
@@ -1061,6 +960,101 @@ function App() {
                 </div>
               </div>
             </div>
+
+            <section className="receive-fund-section" aria-labelledby="receive-fund-title">
+              <div className="screen-header">
+                <div className="screen-copy">
+                  <p className="screen-eyebrow">Fund</p>
+                  <h2 id="receive-fund-title" className="settings-section-title">
+                    Add funds
+                  </h2>
+                  <p className="screen-subtitle">Buy supported assets for this wallet through Mt Pelerin.</p>
+                </div>
+              </div>
+
+              {network.chainId !== 1 ? (
+                <div className="card-stack">
+                  <div className="callout">
+                    <p>Mt Pelerin delivery is configured for Ethereum Mainnet.</p>
+                    <p className="muted">Switch networks before funding this wallet.</p>
+                  </div>
+                  <div className="button-row">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedChainId(1)}
+                    >
+                      Switch to Ethereum Mainnet
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+
+              {network.chainId === 1 && selectedOnrampAsset && mtPelerinOnrampUrl ? (
+                <>
+                  <div className="onramp-toolbar">
+                    <label className="field">
+                      <span>Asset</span>
+                      <select
+                        value={selectedOnrampAsset.symbol}
+                        onChange={(event) => {
+                          setSelectedOnrampAssetSymbol(event.target.value)
+                          setOnrampStatusMessage(null)
+                        }}
+                      >
+                        {onrampAssets.map((asset) => (
+                          <option key={getAssetKey(asset)} value={asset.symbol}>
+                            {asset.symbol} - {asset.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+
+                    <div className="onramp-destination">
+                      <p className="screen-eyebrow">Destination</p>
+                      <p>{truncateAddress(address)}</p>
+                      <p className="muted">Ethereum Mainnet</p>
+                    </div>
+                  </div>
+
+                  {onrampStatusMessage ? <div className="banner success">{onrampStatusMessage}</div> : null}
+
+                  <div className="onramp-widget-shell">
+                    <iframe
+                      key={mtPelerinOnrampUrl}
+                      allow="usb; ethereum; clipboard-write; payment; microphone; camera"
+                      loading="lazy"
+                      src={mtPelerinOnrampUrl}
+                      title="Mt Pelerin onramp widget"
+                    />
+                  </div>
+
+                  <div className="button-row">
+                    <a
+                      className="button-link button-secondary"
+                      href={mtPelerinOnrampUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Open in new tab
+                    </a>
+                    {refreshCurrentWallet ? (
+                      <button
+                        type="button"
+                        className="button-secondary"
+                        onClick={() => void refreshCurrentWallet()}
+                        disabled={isRefreshing}
+                      >
+                        {isRefreshing ? 'Refreshing...' : 'Refresh balances'}
+                      </button>
+                    ) : null}
+                  </div>
+                </>
+              ) : null}
+
+              {network.chainId === 1 && onrampAssets.length === 0 ? (
+                <div className="banner warning">No Mt Pelerin-compatible mainnet assets are configured.</div>
+              ) : null}
+            </section>
           </div>
         ) : null}
 

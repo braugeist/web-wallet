@@ -652,10 +652,6 @@ button:disabled {
   gap: 20px;
 }
 
-.onramp-content {
-  gap: 20px;
-}
-
 .onramp-toolbar {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(12rem, auto);
@@ -734,6 +730,15 @@ button:disabled {
 .receive-details {
   width: min(100%, 34rem);
   justify-self: stretch;
+}
+
+.receive-fund-section {
+  justify-self: stretch;
+  width: 100%;
+  display: grid;
+  gap: 20px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
 }
 
 .qr-card {
