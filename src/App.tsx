@@ -890,15 +890,6 @@ function App() {
                 <h1 className="screen-title">Fund your wallet</h1>
                 <p className="screen-subtitle">Add funds to this wallet through Mt Pelerin.</p>
               </div>
-              <div className="screen-header-actions">
-                <button
-                  type="button"
-                  className="button-secondary button-sm"
-                  onClick={() => handleNavigate('receive')}
-                >
-                  Receive
-                </button>
-              </div>
             </div>
 
             {network.chainId !== 1 ? (
@@ -955,27 +946,6 @@ function App() {
                     src={mtPelerinOnrampUrl}
                     title="Mt Pelerin onramp widget"
                   />
-                </div>
-
-                <div className="button-row">
-                  <a
-                    className="button-link button-secondary"
-                    href={mtPelerinOnrampUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    Open in new tab
-                  </a>
-                  {refreshCurrentWallet ? (
-                    <button
-                      type="button"
-                      className="button-secondary"
-                      onClick={() => void refreshCurrentWallet()}
-                      disabled={isRefreshing}
-                    >
-                      {isRefreshing ? 'Refreshing...' : 'Refresh balances'}
-                    </button>
-                  ) : null}
                 </div>
               </>
             ) : null}
