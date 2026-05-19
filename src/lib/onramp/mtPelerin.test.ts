@@ -7,7 +7,7 @@ import {
 } from './mtPelerin'
 
 describe('buildMtPelerinOnrampUrl', () => {
-  it('builds a mainnet buy widget URL with the wallet address prefilled', () => {
+  it('builds a mainnet funding widget URL with the wallet address prefilled', () => {
     const url = new URL(buildMtPelerinOnrampUrl({
       address: '0x0000000000000000000000000000000000000001',
       allowedCryptoCurrencies: ['ETH', 'USDC'],

@@ -810,7 +810,7 @@ function App() {
               className={activeScreen === 'onramp' ? 'app-menu-action active' : 'app-menu-action'}
               onClick={() => handleNavigate('onramp')}
             >
-              Buy
+              Fund
             </button>
             <button
               className={activeScreen === 'send' ? 'app-menu-action active' : 'app-menu-action'}
@@ -893,8 +893,8 @@ function App() {
             <div className="screen-header">
               <div className="screen-copy">
                 <p className="screen-eyebrow">Onramp</p>
-                <h1 className="screen-title">Buy crypto</h1>
-                <p className="screen-subtitle">Fund this wallet through Mt Pelerin.</p>
+                <h1 className="screen-title">Fund your wallet</h1>
+                <p className="screen-subtitle">Add funds to this wallet through Mt Pelerin.</p>
               </div>
             </div>
 
@@ -902,7 +902,7 @@ function App() {
               <div className="card-stack">
                 <div className="callout">
                   <p>Mt Pelerin delivery is configured for Ethereum Mainnet.</p>
-                  <p className="muted">Switch networks before buying assets for this wallet.</p>
+                  <p className="muted">Switch networks before funding this wallet.</p>
                 </div>
                 <div className="button-row">
                   <button
