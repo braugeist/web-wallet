@@ -736,7 +736,7 @@ button:disabled {
   justify-self: stretch;
 }
 
-.receive-fund-callout {
+.funding-action-callout {
   justify-self: stretch;
   width: 100%;
   display: flex;
@@ -747,7 +747,7 @@ button:disabled {
   border-top: 1px solid var(--border);
 }
 
-.receive-fund-callout-title {
+.funding-action-title {
   font-weight: 700;
 }
 
@@ -1062,7 +1062,7 @@ a.address-actions-menu-item {
     border-left: 0;
   }
 
-  .receive-fund-callout {
+  .funding-action-callout {
     align-items: stretch;
     flex-direction: column;
   }

@@ -5,7 +5,7 @@ import { getAddress, isAddress } from 'viem'
 
 import type { SupportedNetworkConfig } from './config/networks'
 import { supportedNetworks } from './config/networks'
-import { formatAmount, normalizeAmountInput } from './lib/utils/amounts'
+import { formatAmount, normalizeAmountInput, parseAmountInput } from './lib/utils/amounts'
 import { isSupportedErc20GasAsset } from './lib/chains/evm/paymaster'
 import {
   buildMtPelerinOnrampUrl,
@@ -164,6 +164,14 @@ function isValidRpcUrl(value: string) {
   }
 }
 
+function getParsedAmountValue(amount: string, decimals: number) {
+  try {
+    return parseAmountInput(amount, decimals)
+  } catch {
+    return null
+  }
+}
+
 function BackupRecoveryChecklist() {
   return (
     <div className="backup-checklist" aria-label="Backup guidance">
@@ -214,6 +222,28 @@ function Brand({ onClick }: { onClick?: () => void }) {
   }
 
   return <div className="brand">{content}</div>
+}
+
+function FundingActionCallout({
+  description,
+  onFund,
+  title,
+}: {
+  description: string
+  onFund: () => void
+  title: string
+}) {
+  return (
+    <div className="funding-action-callout">
+      <div>
+        <p className="funding-action-title">{title}</p>
+        <p className="muted">{description}</p>
+      </div>
+      <button type="button" onClick={onFund}>
+        Fund wallet
+      </button>
+    </div>
+  )
 }
 
 function App() {
@@ -590,6 +620,17 @@ function App() {
   const selectedGasBalance = balances.find((balance) => getAssetKey(balance.asset) === getAssetKey(selectedGasAsset))
   const recipientValue = recipient.trim()
   const amountValue = amount.trim()
+  const parsedAmountValue = amountValue ? getParsedAmountValue(amountValue, selectedAsset.decimals) : null
+  const selectedBalanceValue = selectedBalance?.value ?? 0n
+  const selectedGasBalanceValue = selectedGasBalance?.value ?? 0n
+  const amountExceedsBalance = parsedAmountValue !== null && selectedBalanceValue < parsedAmountValue
+  const amountLeavesNoFeeBalance = parsedAmountValue !== null
+    && getAssetKey(selectedAsset) === getAssetKey(selectedGasAsset)
+    && selectedBalanceValue <= parsedAmountValue
+  const amountHasInsufficientFunds = amountExceedsBalance || amountLeavesNoFeeBalance
+  const gasAssetHasInsufficientFunds = parsedAmountValue !== null
+    && !amountHasInsufficientFunds
+    && selectedGasBalanceValue === 0n
   const recipientIsValid = recipientValue.length > 0 && isAddress(recipientValue)
   const normalizedRecipient = recipientIsValid ? getAddress(recipientValue) : null
   const sendStepNumber = getSendStepNumber(sendStep)
@@ -612,6 +653,10 @@ function App() {
     setMenuOpen(false)
     setNetworkPickerOpen(false)
     setReceiveActionsOpen(false)
+  }
+
+  function handleFundWallet() {
+    handleNavigate('onramp')
   }
 
   function handleToggleMenu() {
@@ -1035,15 +1080,11 @@ function App() {
               </div>
             </div>
 
-            <div className="receive-fund-callout">
-              <div>
-                <p className="receive-fund-callout-title">Fund this address</p>
-                <p className="muted">Buy supported assets and deliver them to this wallet.</p>
-              </div>
-              <button type="button" onClick={() => handleNavigate('onramp')}>
-                Fund wallet
-              </button>
-            </div>
+            <FundingActionCallout
+              description="Buy supported assets and deliver them to this wallet."
+              onFund={handleFundWallet}
+              title="Fund this address"
+            />
           </div>
         ) : null}
 
@@ -1116,7 +1157,11 @@ function App() {
                     })}
                   </div>
                   {nonZeroBalances.length === 0 ? (
-                    <div className="banner warning">Fund this wallet first to send assets.</div>
+                    <FundingActionCallout
+                      description="Add funds to this wallet before starting a transfer."
+                      onFund={handleFundWallet}
+                      title="Fund this wallet first"
+                    />
                   ) : null}
                   <div className="button-row">
                     <button onClick={() => setSendStep('recipient')} disabled={nonZeroBalances.length === 0}>
@@ -1213,10 +1258,30 @@ function App() {
                       ? `Transaction fees will be paid in ${network.nativeSymbol}.`
                       : `Transaction fees will be paid in ${selectedGasAsset.symbol} through the paymaster on ${network.label}.`}
                   </p>
-                  {selectedGasAsset.type === 'erc20' && selectedGasBalance?.value === 0n ? (
-                    <div className="banner warning">
-                      Add some {selectedGasAsset.symbol} to this wallet before sending, or switch gas payment back to ETH.
-                    </div>
+                  {selectedGasAsset.type === 'erc20' && gasAssetHasInsufficientFunds ? (
+                    <FundingActionCallout
+                      description={`Add ${selectedGasAsset.symbol} to this wallet before sending, or switch gas payment back to ETH.`}
+                      onFund={handleFundWallet}
+                      title={`Add ${selectedGasAsset.symbol} for fees`}
+                    />
+                  ) : null}
+                  {selectedGasAsset.type === 'native' && gasAssetHasInsufficientFunds ? (
+                    <FundingActionCallout
+                      description={`Add ${selectedGasAsset.symbol} to pay transaction fees, or choose a gas asset with balance.`}
+                      onFund={handleFundWallet}
+                      title={`Add ${selectedGasAsset.symbol} for fees`}
+                    />
+                  ) : null}
+                  {amountHasInsufficientFunds ? (
+                    <FundingActionCallout
+                      description={
+                        amountExceedsBalance
+                          ? `Your balance is ${formatAmount(selectedBalanceValue, selectedAsset.decimals)} ${selectedAsset.symbol}.`
+                          : 'Send less or add funds before reviewing this transfer.'
+                      }
+                      onFund={handleFundWallet}
+                      title={amountExceedsBalance ? `Insufficient ${selectedAsset.symbol}` : 'Leave room for transaction fees'}
+                    />
                   ) : null}
                   <div className="button-row">
                     <button className="button-secondary" onClick={() => setSendStep('recipient')}>
@@ -1224,7 +1289,7 @@ function App() {
                     </button>
                     <button
                       onClick={() => void handlePreviewTransfer()}
-                      disabled={!amountValue || isPreparing || isSending}
+                      disabled={!amountValue || amountHasInsufficientFunds || gasAssetHasInsufficientFunds || isPreparing || isSending}
                     >
                       {isPreparing ? 'Preparing...' : 'Review transfer'}
                     </button>
