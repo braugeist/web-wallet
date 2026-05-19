@@ -652,6 +652,10 @@ button:disabled {
   gap: 20px;
 }
 
+.onramp-content {
+  gap: 20px;
+}
+
 .onramp-toolbar {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(12rem, auto);
@@ -732,13 +736,19 @@ button:disabled {
   justify-self: stretch;
 }
 
-.receive-fund-section {
+.receive-fund-callout {
   justify-self: stretch;
   width: 100%;
-  display: grid;
-  gap: 20px;
-  padding-top: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-top: 18px;
   border-top: 1px solid var(--border);
+}
+
+.receive-fund-callout-title {
+  font-weight: 700;
 }
 
 .qr-card {
@@ -1050,6 +1060,11 @@ a.address-actions-menu-item {
     padding: 12px 0 0;
     border-top: 1px solid var(--border);
     border-left: 0;
+  }
+
+  .receive-fund-callout {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .field-input-action {
