@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import {
   buildMtPelerinOnrampUrl,
+  mtPelerinSignatureToBase64Hash,
   MT_PELERIN_WIDGET_ORIGIN,
   parseMtPelerinWidgetEvent,
 } from './mtPelerin'
@@ -10,6 +11,11 @@ describe('buildMtPelerinOnrampUrl', () => {
   it('builds a mainnet funding widget URL with the wallet address prefilled', () => {
     const url = new URL(buildMtPelerinOnrampUrl({
       address: '0x0000000000000000000000000000000000000001',
+      addressValidation: {
+        chain: 'mainnet',
+        code: '1234',
+        hash: 'signature-hash',
+      },
       allowedCryptoCurrencies: ['ETH', 'USDC'],
       cryptoCurrency: 'USDC',
       fiatCurrency: 'EUR',
@@ -32,7 +38,18 @@ describe('buildMtPelerinOnrampUrl', () => {
     expect(url.searchParams.get('success')).toBe('#111111')
     expect(url.searchParams.get('crys')).toBe('ETH,USDC')
     expect(url.searchParams.get('addr')).toBe('0x0000000000000000000000000000000000000001')
+    expect(url.searchParams.get('code')).toBe('1234')
+    expect(url.searchParams.get('hash')).toBe('signature-hash')
+    expect(url.searchParams.get('chain')).toBe('mainnet')
     expect(url.searchParams.get('rfr')).toBe('web-wallet')
+  })
+})
+
+describe('mtPelerinSignatureToBase64Hash', () => {
+  it('base64 encodes a hex signature for the hash parameter', () => {
+    expect(mtPelerinSignatureToBase64Hash(
+      '0xcab5cd25298c738c2f572284ccde1c1262d3bc46ab89d8ea4d42d901f33060030ce4f801cf87c2a0858d2ebe4dc0a87139888fa48daf84c94a0a285669d530e71b',
+    )).toBe('yrXNJSmMc4wvVyKEzN4cEmLTvEaridjqTULZAfMwYAMM5PgBz4fCoIWNLr5NwKhxOYiPpI2vhMlKCihWadUw5xs=')
   })
 })
 

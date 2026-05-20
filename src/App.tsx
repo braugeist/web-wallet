@@ -9,7 +9,9 @@ import { formatAmount, normalizeAmountInput, parseAmountInput } from './lib/util
 import { isSupportedErc20GasAsset } from './lib/chains/evm/paymaster'
 import {
   buildMtPelerinOnrampUrl,
+  createMtPelerinAddressValidation,
   isMtPelerinSupportedAsset,
+  type MtPelerinAddressValidationParameters,
   MT_PELERIN_WIDGET_ORIGIN,
   parseMtPelerinWidgetEvent,
 } from './lib/onramp/mtPelerin'
@@ -19,6 +21,12 @@ import type { TransferQuote, WalletAsset } from './lib/chains/types'
 
 type AppScreen = 'assets' | 'onramp' | 'receive' | 'send' | 'settings'
 type SendStep = 'asset' | 'recipient' | 'amount' | 'review' | 'summary'
+
+type PreparedMtPelerinAddressValidation = {
+  address: string
+  chainId: number
+  parameters: MtPelerinAddressValidationParameters
+}
 
 type BarcodeDetectorResultLike = {
   rawValue?: string
@@ -115,6 +123,10 @@ function getSendStepNumber(step: SendStep) {
 
 function getDefaultGasAsset(assets: WalletAsset[]) {
   return assets.find((asset) => asset.type === 'native') ?? assets[0]
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Something went wrong.'
 }
 
 function isAvailableGasAsset(network: SupportedNetworkConfig, asset: WalletAsset) {
@@ -294,6 +306,10 @@ function App() {
   const [qrScannerReady, setQrScannerReady] = useState(false)
   const [selectedOnrampAssetSymbol, setSelectedOnrampAssetSymbol] = useState('ETH')
   const [onrampStatusMessage, setOnrampStatusMessage] = useState<string | null>(null)
+  const [isPreparingMtPelerinValidation, setIsPreparingMtPelerinValidation] = useState(false)
+  const [mtPelerinValidationError, setMtPelerinValidationError] = useState<string | null>(null)
+  const [mtPelerinAddressValidation, setMtPelerinAddressValidation] =
+    useState<PreparedMtPelerinAddressValidation | null>(null)
   const [rpcUrlInput, setRpcUrlInput] = useState(() => network.rpcUrl)
   const [rpcUrlMessage, setRpcUrlMessage] = useState<string | null>(null)
   const [rpcUrlError, setRpcUrlError] = useState<string | null>(null)
@@ -311,17 +327,22 @@ function App() {
   const onrampAssetSymbols = useMemo(() => onrampAssets.map((asset) => asset.symbol), [onrampAssets])
   const selectedOnrampAsset = onrampAssets.find((asset) => asset.symbol === selectedOnrampAssetSymbol)
     ?? onrampAssets[0]
+  const mtPelerinAddressValidationParameters = mtPelerinAddressValidation?.address === address
+    && mtPelerinAddressValidation.chainId === network.chainId
+    ? mtPelerinAddressValidation.parameters
+    : null
   const mtPelerinOnrampUrl = useMemo(
     () => (
-      address && selectedOnrampAsset
+      address && selectedOnrampAsset && mtPelerinAddressValidationParameters
         ? buildMtPelerinOnrampUrl({
             address,
+            addressValidation: mtPelerinAddressValidationParameters,
             allowedCryptoCurrencies: onrampAssetSymbols,
             cryptoCurrency: selectedOnrampAsset.symbol,
           })
         : null
     ),
-    [address, onrampAssetSymbols, selectedOnrampAsset],
+    [address, mtPelerinAddressValidationParameters, onrampAssetSymbols, selectedOnrampAsset],
   )
 
   useEffect(() => {
@@ -341,6 +362,59 @@ function App() {
       setSelectedOnrampAssetSymbol(onrampAssets[0].symbol)
     }
   }, [onrampAssets, selectedOnrampAsset])
+
+  useEffect(() => {
+    if (network.chainId === 1 && address && session) return
+
+    setMtPelerinAddressValidation(null)
+    setMtPelerinValidationError(null)
+    setIsPreparingMtPelerinValidation(false)
+  }, [address, network.chainId, session])
+
+  useEffect(() => {
+    if (activeScreen !== 'onramp' || network.chainId !== 1 || !address || !session) return
+    if (
+      mtPelerinAddressValidation?.address === address
+      && mtPelerinAddressValidation.chainId === network.chainId
+    ) {
+      return
+    }
+
+    let cancelled = false
+
+    setIsPreparingMtPelerinValidation(true)
+    setMtPelerinValidationError(null)
+
+    void createMtPelerinAddressValidation({
+      address,
+      network,
+      session,
+    })
+      .then((parameters) => {
+        if (cancelled) return
+
+        setMtPelerinAddressValidation({
+          address,
+          chainId: network.chainId,
+          parameters,
+        })
+      })
+      .catch((caughtError) => {
+        if (cancelled) return
+
+        setMtPelerinAddressValidation(null)
+        setMtPelerinValidationError(getErrorMessage(caughtError))
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setIsPreparingMtPelerinValidation(false)
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [activeScreen, address, mtPelerinAddressValidation, network, session])
 
   useEffect(() => {
     setSendStep('asset')
@@ -954,7 +1028,7 @@ function App() {
               </div>
             ) : null}
 
-            {network.chainId === 1 && address && selectedOnrampAsset && mtPelerinOnrampUrl ? (
+            {network.chainId === 1 && address && selectedOnrampAsset ? (
               <>
                 <div className="onramp-toolbar">
                   <label className="field">
@@ -981,17 +1055,27 @@ function App() {
                   </div>
                 </div>
 
+                {isPreparingMtPelerinValidation ? (
+                  <div className="banner">Preparing verified Mt Pelerin funding session...</div>
+                ) : null}
+
+                {mtPelerinValidationError ? (
+                  <div className="banner error">Mt Pelerin address validation failed. {mtPelerinValidationError}</div>
+                ) : null}
+
                 {onrampStatusMessage ? <div className="banner success">{onrampStatusMessage}</div> : null}
 
-                <div className="onramp-widget-shell">
-                  <iframe
-                    key={mtPelerinOnrampUrl}
-                    allow="usb; ethereum; clipboard-write; payment; microphone; camera"
-                    loading="lazy"
-                    src={mtPelerinOnrampUrl}
-                    title="Mt Pelerin onramp widget"
-                  />
-                </div>
+                {mtPelerinOnrampUrl ? (
+                  <div className="onramp-widget-shell">
+                    <iframe
+                      key={mtPelerinOnrampUrl}
+                      allow="usb; ethereum; clipboard-write; payment; microphone; camera"
+                      loading="lazy"
+                      src={mtPelerinOnrampUrl}
+                      title="Mt Pelerin onramp widget"
+                    />
+                  </div>
+                ) : null}
               </>
             ) : null}
 

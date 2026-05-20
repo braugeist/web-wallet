@@ -1,4 +1,9 @@
+import { hexToBytes, type Hex } from 'viem'
+
+import type { SupportedNetworkConfig } from '../../config/networks'
 import type { WalletAsset } from '../chains/types'
+import type { WalletSession } from '../storage/walletSession'
+import { createSmartWalletAccount } from '../wallet/account'
 
 export const MT_PELERIN_WIDGET_ORIGIN = 'https://widget.mtpelerin.com'
 export const MT_PELERIN_LOCAL_TEST_KEY = 'bec6626e-8913-497d-9835-6e6ae9edb144'
@@ -8,6 +13,7 @@ const DEFAULT_FIAT_CURRENCY = 'USD'
 const DEFAULT_PRIMARY_COLOR = '#111111'
 const DEFAULT_SUCCESS_COLOR = '#111111'
 const SUPPORTED_CHAIN_ID = 1
+const MT_PELERIN_ADDRESS_VALIDATION_CHAIN = 'mainnet'
 const SUPPORTED_ONRAMP_ASSETS = new Set([
   'DAI',
   'ETH',
@@ -32,8 +38,15 @@ export type MtPelerinWidgetEvent =
     }
   }
 
+export type MtPelerinAddressValidationParameters = {
+  chain?: string
+  code: string
+  hash: string
+}
+
 type BuildMtPelerinOnrampUrlOptions = {
   address?: string | null
+  addressValidation?: MtPelerinAddressValidationParameters | null
   allowedCryptoCurrencies?: string[]
   cryptoCurrency: string
   fiatCurrency?: string
@@ -50,6 +63,34 @@ function getConfiguredValue(value: string | undefined) {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
+}
+
+function createMtPelerinValidationCode() {
+  const minimumCode = 1000
+  const codeCount = 9000
+
+  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+    const values = new Uint32Array(1)
+    crypto.getRandomValues(values)
+    return String(minimumCode + (values[0] % codeCount))
+  }
+
+  return String(minimumCode + Math.floor(Math.random() * codeCount))
+}
+
+function bytesToBase64(bytes: Uint8Array) {
+  const chunkSize = 0x8000
+  let binary = ''
+
+  for (let index = 0; index < bytes.length; index += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize))
+  }
+
+  return btoa(binary)
+}
+
+export function mtPelerinSignatureToBase64Hash(signature: Hex) {
+  return bytesToBase64(hexToBytes(signature))
 }
 
 export function getMtPelerinIntegrationKey() {
@@ -76,8 +117,40 @@ export function isMtPelerinSupportedAsset(asset: WalletAsset) {
   return asset.chainId === SUPPORTED_CHAIN_ID && SUPPORTED_ONRAMP_ASSETS.has(asset.symbol)
 }
 
+export async function createMtPelerinAddressValidation({
+  address,
+  network,
+  session,
+}: {
+  address: string
+  network: SupportedNetworkConfig
+  session: WalletSession
+}): Promise<MtPelerinAddressValidationParameters> {
+  if (network.chainId !== SUPPORTED_CHAIN_ID) {
+    throw new Error('Mt Pelerin address validation is only configured for Ethereum Mainnet.')
+  }
+
+  const { account } = await createSmartWalletAccount(network, session)
+
+  if (account.address.toLowerCase() !== address.toLowerCase()) {
+    throw new Error('Mt Pelerin address validation address does not match the active wallet.')
+  }
+
+  const code = createMtPelerinValidationCode()
+  const signature = await account.signMessage({
+    message: `MtPelerin-${code}`,
+  })
+
+  return {
+    chain: MT_PELERIN_ADDRESS_VALIDATION_CHAIN,
+    code,
+    hash: mtPelerinSignatureToBase64Hash(signature),
+  }
+}
+
 export function buildMtPelerinOnrampUrl({
   address,
+  addressValidation,
   allowedCryptoCurrencies = [...SUPPORTED_ONRAMP_ASSETS],
   cryptoCurrency,
   fiatCurrency = getMtPelerinDefaultFiatCurrency(),
@@ -109,6 +182,15 @@ export function buildMtPelerinOnrampUrl({
 
   if (address) {
     params.set('addr', address)
+  }
+
+  if (addressValidation) {
+    params.set('code', addressValidation.code)
+    params.set('hash', addressValidation.hash)
+
+    if (addressValidation.chain) {
+      params.set('chain', addressValidation.chain)
+    }
   }
 
   if (referralCode) {
